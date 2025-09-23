@@ -6,7 +6,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # The resource-server container must reach the AS on the host
+          # Must exactly equal the token's "iss" claim:
+          # "iss": "http://host.docker.internal:9000"
+          # If you copy a token minted before (e.g., with iss = http://localhost:9000),
+          # the resource-server expecting http://host.docker.internal:9000 will reject it.
           issuer-uri: ${ISSUER_URL}
 
 logging:

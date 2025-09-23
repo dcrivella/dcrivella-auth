@@ -247,6 +247,33 @@
 			"response": []
 		},
 		{
+			"name": "getResourceServerTasks",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJraWQiOiIxNjhkZTg0Ni04ZDlhLTQ4YTEtYmMzMS0yZWUzYjNmNzUxZTUiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIiwiYXVkIjoiY2xpZW50LXNlcnZlci1wa2NlIiwibmJmIjoxNzU4NjU0MDE2LCJzY29wZSI6WyJvcGVuaWQiLCJwcm9maWxlIl0sImlzcyI6Imh0dHA6Ly9ob3N0LmRvY2tlci5pbnRlcm5hbDo5MDAwIiwiZXhwIjoxNzU4NjU0MzE2LCJpYXQiOjE3NTg2NTQwMTYsImp0aSI6IjE4ZjA2YjMxLWQ0ZTUtNDcwMy1iMzEwLTMwNDkyY2JhODcwYSJ9.S23dpbq2NUxSjzeNnon7X1hMd2Vk1OtanHvr9Ch6UN4akaEIuLup1FSuwPn4Ca5gWN0FfSNjQuo_UAaxHEoInOYy5afkzRwzcj1_SmBbM4gCt-MqViEfDsMkWQVQccWwseI5dvMRI2Um9RK2feK9xhjJevF1eh7bwdy22S3YI1MOiaX1rRIlcvZokU5Btxq-QtUZu-yaig2AlPE7ggOkwIHnUGZ6MlM2vbqi59mNpXCtaPMOQ6hHwzJiL93iQFbIEpfKlkNKlz9pq4AU_g_mbjfX_98LDm9_oq11EJh4GmtTT6yO8-vhgw1clajIPYlFK7YOaKfGD53tssn0lrTrQg",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base-resource-server-url}}/tasks",
+					"host": [
+						"{{base-resource-server-url}}"
+					],
+					"path": [
+						"tasks"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "oidc-discover",
 			"request": {
 				"method": "GET",
