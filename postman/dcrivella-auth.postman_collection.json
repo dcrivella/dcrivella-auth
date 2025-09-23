@@ -1,0 +1,313 @@
+{
+	"info": {
+		"_postman_id": "b55a2b99-7913-4100-964e-de74f48395e1",
+		"name": "dcrivella-auth",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40828137"
+	},
+	"item": [
+		{
+			"name": "getToken-client-credentials",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "username",
+							"value": "client-m2m",
+							"type": "string"
+						},
+						{
+							"key": "password",
+							"value": "secret2",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "grant_type",
+							"value": "client_credentials",
+							"type": "text"
+						},
+						{
+							"key": "scope",
+							"value": "api.read",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base-auth-url}}/oauth2/token",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						"oauth2",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getToken-oauth2-user",
+			"request": {
+				"auth": {
+					"type": "oauth2",
+					"oauth2": [
+						{
+							"key": "useBrowser",
+							"value": false,
+							"type": "boolean"
+						},
+						{
+							"key": "clientSecret",
+							"value": "secret1",
+							"type": "string"
+						},
+						{
+							"key": "clientId",
+							"value": "client-postman-confidential",
+							"type": "string"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "https://oauth.pstmn.io/v1/callback",
+							"type": "string"
+						},
+						{
+							"key": "tokenName",
+							"value": "CLIENT_TOKEN",
+							"type": "string"
+						},
+						{
+							"key": "addTokenTo",
+							"value": "header",
+							"type": "string"
+						},
+						{
+							"key": "scope",
+							"value": "openid profile",
+							"type": "string"
+						},
+						{
+							"key": "accessTokenUrl",
+							"value": "{{base-auth-url}}/oauth2/token",
+							"type": "string"
+						},
+						{
+							"key": "authUrl",
+							"value": "{{base-auth-url}}/oauth2/authorize",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base-auth-url}}/userinfo",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						"userinfo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getToken-oauth2-user-PKCE",
+			"request": {
+				"auth": {
+					"type": "oauth2",
+					"oauth2": [
+						{
+							"key": "scope",
+							"value": "openid profile",
+							"type": "string"
+						},
+						{
+							"key": "clientId",
+							"value": "client-server-postman-pkce",
+							"type": "string"
+						},
+						{
+							"key": "client_authentication",
+							"value": "body",
+							"type": "string"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "https://oauth.pstmn.io/v1/callback",
+							"type": "string"
+						},
+						{
+							"key": "tokenName",
+							"value": "SPA_PKCE_TOKEN",
+							"type": "string"
+						},
+						{
+							"key": "clientSecret",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "grant_type",
+							"value": "authorization_code_with_pkce",
+							"type": "string"
+						},
+						{
+							"key": "useBrowser",
+							"value": false,
+							"type": "boolean"
+						},
+						{
+							"key": "addTokenTo",
+							"value": "header",
+							"type": "string"
+						},
+						{
+							"key": "accessTokenUrl",
+							"value": "{{base-auth-url}}/oauth2/token",
+							"type": "string"
+						},
+						{
+							"key": "authUrl",
+							"value": "{{base-auth-url}}/oauth2/authorize",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base-auth-url}}/userinfo",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						"userinfo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "refreshToken-oauth2-user",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "secret1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "client-postman-confidential",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "grant_type",
+							"value": "refresh_token",
+							"type": "text"
+						},
+						{
+							"key": "refresh_token",
+							"value": "8_5FNSn2BBGiFydoEsiq69v2Q60GF4mX7ueACMp5lX-MXuj3dT6ApYsIVEy5AwNG9tBWTaxs457e9nQI-jaUH06VNUY6dxsAMOWMNH2d7o89ZYMX52WMGqbkn3bLtnhB",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base-auth-url}}/oauth2/token",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						"oauth2",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "oidc-discover",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base-auth-url}}/.well-known/openid-configuration",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						".well-known",
+						"openid-configuration"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getUserInfo",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base-auth-url}}/userinfo",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						"userinfo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getJWKS",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base-auth-url}}/oauth2/jwks",
+					"host": [
+						"{{base-auth-url}}"
+					],
+					"path": [
+						"oauth2",
+						"jwks"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
