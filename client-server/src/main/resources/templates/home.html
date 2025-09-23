@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>client-server APP</title>
+    </head>
+    <body>
+        <h1 th:text="${userName} ?: 'User'">User</h1>
+
+        <h2>Access Token: <span th:text="${accessTokenValue} ?: 'N/A'">N/A</span></h2>
+        <h2>Refresh Token: <span th:text="${refreshTokenValue} ?: 'N/A'">N/A</span></h2>
+        <h2>Id Token: <span th:text="${idTokenValue} ?: 'N/A'">N/A</span></h2>
+
+        <h2>Claims:</h2>
+        <pre th:text="${claimsJson} ?: 'N/A'">N/A</pre>
+
+        <h2>Tasks:</h2>
+        <div th:utext="${tasksHtml} ?: 'No tasks available'">No tasks available</div>
+
+        <form th:action="@{/logout}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit">Logout</button>
+        </form>
+    </body>
+</html>

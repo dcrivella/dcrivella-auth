@@ -1,0 +1,34 @@
+server:
+  port: 9000
+  servlet:
+    session:
+      cookie:
+        name: AUTH_SESSION
+
+spring:
+  application:
+    name: auth-server
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_server
+    username: auth_user
+    password: auth_pass
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: auth
+
+  flyway:
+    enabled: true
+    schemas: auth
+    locations: classpath:db/migration
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: INFO

@@ -1,0 +1,37 @@
+services:
+  db:
+    restart: unless-stopped
+    networks:
+      - server-side
+      - dev-expose
+    ports:
+      - "5432:5432"
+
+  auth-server:
+    restart: unless-stopped
+    networks:
+      - client-side
+      - server-side
+      - dev-expose
+    ports:
+      - ${AUTH_SERVER_EXPOSED_PORT}:${AUTH_SERVER_INTERNAL_PORT}
+
+  client-server:
+    restart: unless-stopped
+    networks:
+      - client-side
+      - dev-expose
+    ports:
+      - ${CLIENT_SERVER_EXPOSED_PORT}:${CLIENT_SERVER_INTERNAL_PORT}
+
+  resource-server:
+    restart: unless-stopped
+    networks:
+      - client-side
+      - dev-expose
+    ports:
+      - ${RESOURCE_SERVER_EXPOSED_PORT}:${RESOURCE_SERVER_INTERNAL_PORT}
+
+networks:
+  dev-expose:
+  

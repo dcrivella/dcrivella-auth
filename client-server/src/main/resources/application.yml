@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        name: CLIENT_SESSION
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          client-server-pkce-oidc:
+            provider: spring
+            client-id: client-server-pkce
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile
+        provider:
+          spring:
+            issuer-uri: http://localhost:9000
+
+api:
+  resource-server:
+    url: http://localhost:8081
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: INFO

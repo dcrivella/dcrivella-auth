@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        name: CLIENT_SESSION
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          client-server-pkce-oidc:
+            provider: spring
+            client-id: client-server-pkce
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
+            # Spring compute it from the public base URL seen by the browser
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile
+        provider:
+          spring:
+            # The client-server container must reach the AS on the host
+            issuer-uri: ${ISSUER_URL}
+
+api:
+  resource-server:
+    url: ${RESOURCE_SERVER_API_URL}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: INFO

@@ -1,0 +1,69 @@
+name: my-stack
+
+services:
+  db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: ${SUPERUSER_DATABASE_USER}
+      POSTGRES_PASSWORD: ${SUPERUSER_DATABASE_PASSWORD}
+      POSTGRES_DB: bootstrap
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - server-side      
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth-server:
+    image: dcrivella/auth-server:${AUTH_SERVER_IMAGE_TAG}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: ${AUTH_SERVER_INTERNAL_PORT}
+    networks:
+      - client-side
+      - server-side
+
+  client-server:
+    image: dcrivella/client-server:${CLIENT_SERVER_IMAGE_TAG}
+    depends_on:
+      auth-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: ${CLIENT_SERVER_INTERNAL_PORT}
+      ISSUER_URL: ${ISSUER_URL}
+      RESOURCE_SERVER_API_URL: http://resource-server:${RESOURCE_SERVER_INTERNAL_PORT}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"      
+    networks:
+      - client-side
+
+  resource-server:
+    image: dcrivella/resource-server:${RESOURCE_SERVER_IMAGE_TAG}
+    depends_on:
+      auth-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: ${RESOURCE_SERVER_INTERNAL_PORT}
+      ISSUER_URL: ${ISSUER_URL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"      
+    networks:
+      - client-side         
+
+volumes:
+  db-data:
+
+networks:
+  client-side: {}
+  server-side:
+    internal: true              

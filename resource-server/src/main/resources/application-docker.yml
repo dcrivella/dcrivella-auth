@@ -1,0 +1,17 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # The resource-server container must reach the AS on the host
+          issuer-uri: ${ISSUER_URL}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: INFO
