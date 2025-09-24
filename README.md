@@ -56,6 +56,10 @@ cd stack
 make up
 ```
 
+➡️ Open the client application in your browser:
+
+http://localhost:8080
+
 ## Running Options
 
 ### JVM (normal)
