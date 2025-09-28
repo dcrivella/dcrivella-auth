@@ -14,7 +14,7 @@ description = "auth-server"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(24)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -76,7 +76,7 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     imageName.set("dcrivella/auth-server:${project.version}")
     environment.set(
         mapOf(
-            "BP_JVM_VERSION" to "24",
+            "BP_JVM_VERSION" to "25",
             "BP_NATIVE_IMAGE" to "true" // or run: SPRING_PROFILES_ACTIVE=docker ./gradlew bootBuildImage -PBP_NATIVE_IMAGE=true
         )
     )
