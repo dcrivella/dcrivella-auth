@@ -19,20 +19,20 @@ This project provides an **OAuth2 Authorization Server** (with OIDC support) bui
 ### Install JDK with SDKMAN
 We recommend [SDKMAN!](https://sdkman.io) to manage multiple JDK versions.
 
-Install Temurin JDK 24:
+Install Temurin JDK 25:
 
 ```zsh
-sdk install java 24.0.2-tem
-sdk default java 24.0.2-tem
+sdk install java 25-tem
+sdk default java 25-tem
 ```
 
 Check:
 ```zsh
 java --version
 
-openjdk 24.0.2 2025-07-15
-OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12)
-OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing)
+openjdk 25 2025-09-16 LTS
+OpenJDK Runtime Environment Temurin-25+36 (build 25+36-LTS)
+OpenJDK 64-Bit Server VM Temurin-25+36 (build 25+36-LTS, mixed mode, sharing)
 ```
 
 ## Quick Run
@@ -59,11 +59,15 @@ make up
 ➡️ Open the client application in your browser:
 
 http://localhost:8080
+```text
+Username: user
+Password: pass
+```
 
 ## Running Options
 
 ### JVM (normal)
-To run normally with JDK 24 (same as pressing Run in IntelliJ):
+To run normally with JDK 25 (same as pressing Run in IntelliJ):
 ```zsh
 cd auth-server
 ./gradlew bootRun
