@@ -6,6 +6,10 @@ server:
         name: CLIENT_SESSION
 
 spring:
+  application:
+    name: client-server
+    version: "@projectVersion@"
+
   security:
     oauth2:
       client:

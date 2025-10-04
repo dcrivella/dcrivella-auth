@@ -5,5 +5,10 @@
  /  _____  \ |  `--'  |     |  |     |  |  |  |      .----)   |   |  |____ |  |\  \----.  \    /    |  |____ |  |\  \----.
 /__/     \__\ \______/      |__|     |__|  |__|      |_______/    |_______|| _| `._____|   \__/     |_______|| _| `._____|
 
- :: Spring Boot ::      (v${spring-boot.version})
- :: Java ::             (v${java.version})
+ :: Spring Boot :: v${spring-boot.version}
+ :: Java        :: v${java.version} (${java.vendor})
+ :: Runtime     :: ${java.runtime.version}
+ :: JVM         :: ${java.vm.name} (${java.vm.version})
+ :: Application :: ${spring.application.name}
+ :: Version     :: ${spring.application.version}
+ :: Profile(s)  :: ${spring.profiles.active:default}
