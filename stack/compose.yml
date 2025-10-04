@@ -2,7 +2,7 @@ name: my-stack
 
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     restart: always
     environment:
       POSTGRES_USER: ${SUPERUSER_DATABASE_USER}

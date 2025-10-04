@@ -8,6 +8,7 @@ server:
 spring:
   application:
     name: auth-server
+    version: "@projectVersion@"
 
   datasource:
     url: jdbc:postgresql://db:5432/auth_server

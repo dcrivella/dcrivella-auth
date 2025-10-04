@@ -28,27 +28,32 @@ build: build-auth build-client build-resource
 
 build-auth:
 	@echo "==> Building auth-server image $(AUTH_SERVER_IMAGE)"
-	cd $(AUTH_SERVER_DIR) && ./gradlew bootBuildImage \
+	cd $(AUTH_SERVER_DIR) && ./gradlew clean bootBuildImage \
 		-PBP_NATIVE_IMAGE=true \
-		-Pspring-boot.build-image.imageName=$(AUTH_SERVER_IMAGE)
+		-Pspring-boot.build-image.imageName=$(AUTH_SERVER_IMAGE) \
+		-Pversion=$(AUTH_SERVER_IMAGE_TAG)
 	@echo "==> auth-server build complete."
 
 build-client:
 	@echo "==> Building client-server image $(CLIENT_SERVER_IMAGE)"
-	cd $(CLIENT_SERVER_DIR) && ./gradlew bootBuildImage \
-		-Pspring-boot.build-image.imageName=$(CLIENT_SERVER_IMAGE)
+	cd $(CLIENT_SERVER_DIR) && ./gradlew clean bootBuildImage \
+		-PBP_NATIVE_IMAGE=true \
+		-Pspring-boot.build-image.imageName=$(CLIENT_SERVER_IMAGE) \
+		-Pversion=$(CLIENT_SERVER_IMAGE_TAG)
 	@echo "==> client-server build complete."
 
 build-resource:
 	@echo "==> Building resource-server image $(RESOURCE_SERVER_IMAGE)"
-	cd $(RESOURCE_SERVER_DIR) && ./gradlew bootBuildImage \
-		-Pspring-boot.build-image.imageName=$(RESOURCE_SERVER_IMAGE)
+	cd $(RESOURCE_SERVER_DIR) && ./gradlew clean bootBuildImage \
+		-PBP_NATIVE_IMAGE=true \
+		-Pspring-boot.build-image.imageName=$(RESOURCE_SERVER_IMAGE) \
+		-Pversion=$(RESOURCE_SERVER_IMAGE_TAG)
 	@echo "==> resouce-server build complete."			
 
 # ------------------------
 # Compose targets
 # ------------------------
-up: build
+up: 
 	@echo "==> Starting Compose stack"
 	$(COMPOSE) up -d --remove-orphans
 	@echo "==> Stack is up. Run 'make ps' or 'make logs' to inspect."

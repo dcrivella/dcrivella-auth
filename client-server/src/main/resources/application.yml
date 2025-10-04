@@ -6,6 +6,10 @@ server:
         name: CLIENT_SESSION
 
 spring:
+  application:
+    name: client-server
+    version: "@projectVersion@"
+
   security:
     oauth2:
       client:
@@ -19,11 +23,11 @@ spring:
             scope: openid, profile
         provider:
           spring:
-            issuer-uri: http://localhost:9000
+            issuer-uri: http://host.docker.internal:9000
 
 api:
   resource-server:
-    url: http://localhost:8081
+    url: http://host.docker.internal:8081
 
 logging:
   level:

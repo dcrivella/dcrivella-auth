@@ -2,6 +2,10 @@ server:
   port: ${SERVER_PORT:8081}
 
 spring:
+  application:
+    name: resource-server
+    version: "@projectVersion@"
+
   security:
     oauth2:
       resourceserver:
