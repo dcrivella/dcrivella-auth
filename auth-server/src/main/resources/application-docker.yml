@@ -26,3 +26,9 @@ spring:
     enabled: true
     schemas: ${AUTH_DB_SCHEMA:auth}
     locations: classpath:db/migration
+
+auth:
+  token:
+    # No per-client audiences defined in Docker profile by default.
+    # Compose env provides mapping for client-server-pkce.
+    client-audiences: { }

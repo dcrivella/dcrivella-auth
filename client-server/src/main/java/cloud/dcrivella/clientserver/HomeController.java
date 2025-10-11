@@ -1,5 +1,7 @@
 package cloud.dcrivella.clientserver;
 
+import com.nimbusds.jwt.SignedJWT;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
@@ -30,22 +32,51 @@ public class HomeController {
         model.addAttribute("refreshTokenValue", rt != null ? rt.getTokenValue() : null);
         model.addAttribute("idTokenValue", oidcUser != null ? oidcUser.getIdToken().getTokenValue() : null);
 
-        // Pretty-print claims as a single String to avoid reflection in the view
+        // Pretty-print ID token claims and access token claims for visibility
         model.addAttribute("claimsJson", oidcUser != null ? oidcUser.getClaims().toString() : null);
+        String atClaims = null;
+        if (at != null) {
+            try {
+                var jwt = SignedJWT.parse(at.getTokenValue());
+                atClaims = jwt.getJWTClaimsSet().getClaims().toString();
+            } catch (Exception _) {
+                atClaims = "<unable to parse access token claims>";
+            }
+        }
+        model.addAttribute("accessTokenClaimsJson", atClaims);
 
         // Fetch tasks from resource-server
-        String tasksHtml = null;
-        if (at != null) {
-            tasksHtml = this.resourceServerApi //
-                    .get() //
-                    .uri("/tasks") //
-                    .headers(h -> h.setBearerAuth(at.getTokenValue())) //
-                    .retrieve() //
-                    .bodyToMono(String.class) //
-                    .block();
-        }
-        model.addAttribute("tasksHtml", tasksHtml);
+        String tasks = fetchTasks(at);
+        model.addAttribute("tasksResponse", tasks);
 
         return "home";
+    }
+
+    private String fetchTasks(OAuth2AccessToken at) {
+        if (at == null)
+            return null;
+        return this.resourceServerApi.get().uri("/tasks") //
+                .headers(h -> h.setBearerAuth(at.getTokenValue())) //
+                .exchangeToMono(resp -> { //
+                    if (resp.statusCode().is2xxSuccessful()) {
+                        return resp.bodyToMono(String.class);
+                    }
+                    return resp.bodyToMono(String.class) //
+                            .defaultIfEmpty("") //
+                            .map(body -> { //
+                                HttpStatusCode sc = resp.statusCode();
+                                String reason;
+                                if (sc.isSameCodeAs(HttpStatusCode.valueOf(401))) {
+                                    reason = "Unauthorized (likely missing or invalid audience)";
+                                } else if (sc.isSameCodeAs(HttpStatusCode.valueOf(403))) {
+                                    reason = "Forbidden (insufficient scope/authority)";
+                                } else {
+                                    reason = "Error";
+                                }
+                                String detail = body.isBlank() ? "" : ("\nDetails: " + body);
+                                return "<pre>" + reason + " [" + sc.value() + "]" + detail + "</pre>";
+                            });
+                }) //
+                .block();
     }
 }

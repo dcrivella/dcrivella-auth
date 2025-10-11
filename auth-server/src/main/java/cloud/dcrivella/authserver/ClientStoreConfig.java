@@ -18,6 +18,7 @@ import java.util.UUID;
 public class ClientStoreConfig {
 
     private static final String POSTMAN_REDIRECT_URI = "https://oauth.pstmn.io/v1/callback";
+    private static final String SCOPE_API_READ = "api.read";
 
     @Bean
     protected RegisteredClientRepository registeredClientRepository() {
@@ -47,18 +48,16 @@ public class ClientStoreConfig {
                 .clientId("client-server-postman-pkce") //
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE) //
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN) //
                 .redirectUri(POSTMAN_REDIRECT_URI) //
                 .scope(OidcScopes.OPENID) //
                 .scope(OidcScopes.PROFILE) //
+                .scope(SCOPE_API_READ) // allow calling the resource-server
                 .clientSettings(ClientSettings.builder() //
                         .requireAuthorizationConsent(true) //
                         .requireProofKey(true) // enforce PKCE
                         .build()) //
                 .tokenSettings(TokenSettings.builder() //
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
-                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // default: 60m
-                        .reuseRefreshTokens(false) // rotate refresh tokens
                         .build()) //
                 .build();
 
@@ -73,14 +72,13 @@ public class ClientStoreConfig {
                 .postLogoutRedirectUri("http://localhost:8080/") //
                 .scope(OidcScopes.OPENID) //
                 .scope(OidcScopes.PROFILE) //
+                .scope(SCOPE_API_READ) // allow calling the resource-server
                 .clientSettings(ClientSettings.builder() //
                         .requireAuthorizationConsent(true) //
                         .requireProofKey(true) // enforce PKCE
                         .build()) //
                 .tokenSettings(TokenSettings.builder() //
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
-                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // default: 60m
-                        .reuseRefreshTokens(false) // rotate refresh tokens
                         .build()) //
                 .build();
 
@@ -90,9 +88,9 @@ public class ClientStoreConfig {
                 .clientSecret("{noop}secret2") //
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC) //
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS) //
-                .scope("api.read") //
+                .scope(SCOPE_API_READ) // allow calling the resource-server
                 .tokenSettings(TokenSettings.builder() //
-                        .accessTokenTimeToLive(java.time.Duration.ofMinutes(5)) //
+                        .accessTokenTimeToLive(Duration.ofMinutes(5)) //
                         .build()) //
                 .build();
 

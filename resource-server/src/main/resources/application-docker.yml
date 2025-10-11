@@ -15,6 +15,8 @@ spring:
           # If you copy a token minted before (e.g., with iss = http://localhost:9000),
           # the resource-server expecting http://host.docker.internal:9000 will reject it.
           issuer-uri: ${ISSUER_URL}
+          # Single audience value (one audience per resource server)
+          audience: ${RESOURCE_AUDIENCE:}
 
 logging:
   level:

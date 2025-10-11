@@ -21,7 +21,7 @@ spring:
             authorization-grant-type: authorization_code
             # Spring compute it from the public base URL seen by the browser
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: openid, profile
+            scope: openid, profile, api.read
         provider:
           spring:
             # The client-server container must reach the AS on the host

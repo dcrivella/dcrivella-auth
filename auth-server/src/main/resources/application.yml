@@ -27,6 +27,19 @@ spring:
     schemas: auth
     locations: classpath:db/migration
 
+auth:
+  token:
+    # Per-client audience mapping (clientId -> audiences)
+    client-audiences:
+      # PKCE client used by client-server
+      client-server-pkce: [ "api://resource-server" ]
+      # Confidential client used by Postman
+      client-postman-confidential: [ "api://resource-server" ]
+      # PKCE client used by Postman
+      client-server-postman-pkce: [ "api://resource-server" ]
+      # Machine-to-machine client
+      client-m2m: [ "api://resource-server" ]
+
 logging:
   level:
     root: INFO

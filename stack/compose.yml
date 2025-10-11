@@ -27,6 +27,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: ${AUTH_SERVER_INTERNAL_PORT}
+      ISSUER_URL: ${ISSUER_URL}
+      AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_SERVER_PKCE_0: ${AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_SERVER_PKCE_0}
     networks:
       - client-side
       - server-side
@@ -55,6 +57,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: ${RESOURCE_SERVER_INTERNAL_PORT}
       ISSUER_URL: ${ISSUER_URL}
+      RESOURCE_AUDIENCE: ${RESOURCE_AUDIENCE}
     extra_hosts:
       - "host.docker.internal:host-gateway"      
     networks:

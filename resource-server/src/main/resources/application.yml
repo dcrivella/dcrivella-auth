@@ -11,6 +11,7 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://host.docker.internal:9000
+          audience: "api://resource-server"
 
 logging:
   level:
