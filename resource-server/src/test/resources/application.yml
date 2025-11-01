@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: resource-server-test
+
+logging:
+  level:
+    root: WARN

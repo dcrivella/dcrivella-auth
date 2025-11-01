@@ -1,5 +1,7 @@
 package cloud.dcrivella.resourceserver.security;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -40,13 +42,17 @@ public class SecurityConfig {
      * a small allowlist and to use JWT Bearer token authentication.
      */
     @Bean
-    protected SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    protected SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> jwtDecoderProvider) throws Exception {
         http //
                 .authorizeHttpRequests(auth -> auth //
                         .requestMatchers("/actuator/**", "/error").permitAll() //
-                        .anyRequest().authenticated()) //
-                .oauth2ResourceServer(oauth -> oauth //
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                        .anyRequest().authenticated());
+
+        // Only configure JWT resource server when a JwtDecoder is available (e.g., issuer configured).
+        if (jwtDecoderProvider.getIfAvailable() != null) {
+            http.oauth2ResourceServer(oauth -> oauth
+                    .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        }
         return http.build();
     }
 
@@ -57,6 +63,7 @@ public class SecurityConfig {
      * audience validation is skipped.
      */
     @Bean
+    @ConditionalOnProperty(prefix = "spring.security.oauth2.resourceserver.jwt", name = "issuer-uri")
     protected JwtDecoder jwtDecoder(OAuth2ResourceServerProperties props, JwtAudienceProperties audienceProps) {
         String issuer = props.getJwt().getIssuerUri();
         JwtDecoder decoder = JwtDecoders.fromIssuerLocation(issuer);

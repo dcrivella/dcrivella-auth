@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: client-server-test
+
+  security:
+    oauth2:
+      client:
+        registration:
+          client-server-pkce-oidc:
+            provider: spring
+            client-id: test-client
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile
+        provider:
+          spring:
+            authorization-uri: http://127.0.0.1:9999/oauth2/authorize
+            token-uri: http://127.0.0.1:9999/oauth2/token
+            jwk-set-uri: http://127.0.0.1:9999/oauth2/jwks
+            user-info-uri: http://127.0.0.1:9999/userinfo
+
+api:
+  resource-server:
+    url: http://127.0.0.1:9998
+
+logging:
+  level:
+    root: WARN
