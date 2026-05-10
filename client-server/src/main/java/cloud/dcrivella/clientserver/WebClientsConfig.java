@@ -9,6 +9,11 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebClientsConfig {
 
     @Bean
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder();
+    }
+
+    @Bean
     protected WebClient resourceServerApi(WebClient.Builder builder,
             @Value("${api.resource-server.url}") String baseUrl) {
         return builder.clone().baseUrl(baseUrl).build();

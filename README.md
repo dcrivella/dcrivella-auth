@@ -41,17 +41,17 @@ We recommend [SDKMAN!](https://sdkman.io) to manage multiple JDK versions.
 Install Temurin JDK 25:
 
 ```zsh
-sdk install java 25-tem
-sdk default java 25-tem
+sdk install java 25.0.3-tem
+sdk default java 25.0.3-tem
 ```
 
 Check:
 ```zsh
 java --version
 
-openjdk 25 2025-09-16 LTS
-OpenJDK Runtime Environment Temurin-25+36 (build 25+36-LTS)
-OpenJDK 64-Bit Server VM Temurin-25+36 (build 25+36-LTS, mixed mode, sharing)
+openjdk 25.0.3 2026-04-21 LTS
+OpenJDK Runtime Environment Temurin-25.0.3+9 (build 25.0.3+9-LTS)
+OpenJDK 64-Bit Server VM Temurin-25.0.3+9 (build 25.0.3+9-LTS, mixed mode, sharing)
 ```
 
 ### Make
@@ -116,17 +116,17 @@ cd auth-server
 For native image compilation, install **GraalVM with Native Image Kit** (NIK):
 
 ```zsh
-sdk install java 25.r25-nik
-sdk use java 25.r25-nik
+sdk install java 25.0.3.r25-nik
+sdk use java 25.0.3.r25-nik
 ```
 
 Check:
 ```zsh
 java --version
 
-openjdk version "25" 2025-09-16 LTS
-OpenJDK Runtime Environment Liberica-NIK-25.0.0-1 (build 25+37-LTS)
-OpenJDK 64-Bit Server VM Liberica-NIK-25.0.0-1 (build 25+37-LTS, mixed mode, sharing)
+openjdk 25.0.3 2026-04-21 LTS
+OpenJDK Runtime Environment Liberica-NIK-25.0.3-1 (build 25.0.3+12-LTS)
+OpenJDK 64-Bit Server VM Liberica-NIK-25.0.3-1 (build 25.0.3+12-LTS, mixed mode, sharing)
 ```
 
 Understanding GraalVM versions:
@@ -153,8 +153,8 @@ Shortcut (compile + run in one step):
 ```
 
 ### Docker Build (Paketo Buildpacks)
-This project uses Paketo Buildpacks via Spring Boot's bootBuildImage to produce OCI images.
-By default our Gradle task is configured to build native images but you can choose to use JVM with a property.
+This project uses Paketo Buildpacks via Spring Boot's bootBuildImage to produce OCI images. <br>
+By default, our Gradle task is configured to build native images, but you can choose to use JVM with a property.
 
 - Build native image (default) → Banner will show: "JVM :: Substrate VM..."
     ```zsh
@@ -180,15 +180,15 @@ The project uses the Gradle wrapper (./gradlew).
 
 Install Gradle locally:
 ```zsh
-sdk install gradle 9.1.0
-sdk default gradle 9.1.0
+sdk install gradle 9.5.0
+sdk default gradle 9.5.0
 gradle -v
 ```
 
 Update wrapper inside a service (e.g., auth-server):
 ```zsh
 cd auth-server
-gradle wrapper --gradle-version 9.1.0
+gradle wrapper --gradle-version 9.5.0
 ./gradlew -v
 ```
 

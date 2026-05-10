@@ -21,6 +21,11 @@ public class HomeController {
         this.resourceServerApi = resourceServerApi;
     }
 
+    @GetMapping("/")
+    public String index() {
+        return "redirect:/home";
+    }
+
     @GetMapping("/home")
     public String home(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient client,
             @AuthenticationPrincipal OidcUser oidcUser, org.springframework.ui.Model model) {

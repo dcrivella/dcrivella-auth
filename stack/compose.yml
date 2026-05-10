@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${SUPERUSER_DATABASE_PASSWORD}
       POSTGRES_DB: bootstrap
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql
       - ./db/init:/docker-entrypoint-initdb.d
     networks:
       - server-side      

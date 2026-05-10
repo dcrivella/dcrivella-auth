@@ -1,11 +1,13 @@
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.kotlin.dsl.dependencies
+import org.gradle.kotlin.dsl.java
 
 plugins {
     java
-    id("org.springframework.boot") version "3.5.7"
+    id("org.springframework.boot") version "4.0.6"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "0.11.2"
+    id("org.graalvm.buildtools.native") version "1.1.0"
     id("org.asciidoctor.jvm.convert") version "4.0.5"
 }
 

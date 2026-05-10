@@ -17,7 +17,7 @@ public class ClientSecurityConfig {
         oidcLogout.setPostLogoutRedirectUri("{baseUrl}/"); // or /home
 
         http.authorizeHttpRequests(a -> a //
-                        .requestMatchers("/", "/default-ui.css", "/favicon.ico", "/login**").permitAll() //
+                        .requestMatchers("/", "/error", "/default-ui.css", "/favicon.ico", "/login**").permitAll() //
                         .anyRequest().authenticated()) //
                 .oauth2Login(o -> o.defaultSuccessUrl("/home", true)) //
                 .logout(l -> l.logoutSuccessHandler(oidcLogout));

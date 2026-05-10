@@ -1,11 +1,14 @@
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.kotlin.dsl.dependencies
+import org.gradle.kotlin.dsl.extra
+import org.gradle.kotlin.dsl.java
 
 plugins {
     java
-    id("org.springframework.boot") version "3.5.7"
+    id("org.springframework.boot") version "4.0.6"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "0.11.2"
+    id("org.graalvm.buildtools.native") version "1.1.0"
     id("org.asciidoctor.jvm.convert") version "4.0.5"
 }
 
@@ -46,8 +49,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
