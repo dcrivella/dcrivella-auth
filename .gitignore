@@ -5,6 +5,16 @@
 *.ipr
 out/
 
+### Gradle ###
+.gradle/
+**/.gradle/
+.gradle-home/
+**/.gradle-home/
+build/
+**/build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
 ### VS Code ###
 .vscode/
 

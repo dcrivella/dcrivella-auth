@@ -79,6 +79,8 @@ public class ClientStoreConfig {
                         .build()) //
                 .tokenSettings(TokenSettings.builder() //
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
+                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // public client: keep refresh tokens short
+                        .reuseRefreshTokens(false) // public client: rotate refresh tokens
                         .build()) //
                 .build();
 

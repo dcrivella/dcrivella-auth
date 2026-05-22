@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 @ImportRuntimeHints(ClientServerRuntimeHints.class)
 public class ClientServerApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(ClientServerApplication.class, args);
     }
 }

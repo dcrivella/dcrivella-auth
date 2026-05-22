@@ -4,6 +4,8 @@ Spring Boot Authorization Server with GraalVM
 This project provides an **OAuth2 Authorization Server** (with OIDC support) built on Spring Boot, with support for running on both a normal JVM and as a **GraalVM native image**.
 
 ## Project Structure
+This repository is a single **Gradle multi-project build** with one root wrapper (`./gradlew`) and three application modules:
+
 - **auth-server** → Spring Authorization Server (OIDC, OAuth2 flows)
 - **client-server** → Example web client (PKCE, Thymeleaf UI)
 - **resource-server** → Example API protected by JWT
@@ -12,6 +14,7 @@ This project provides an **OAuth2 Authorization Server** (with OIDC support) bui
 
 ```text
 dcrivella-auth/
+├─ Makefile                       # root helper that delegates to stack/makefile
 ├─ auth-server/
 ├─ client-server/
 ├─ resource-server/
@@ -81,19 +84,18 @@ The browser is outside the Docker network, but your Authorization Server (AS) mu
 If you copy a token minted before (e.g., with iss = http://localhost:9000), the **resource-server** expecting http://host.docker.internal:9000 will reject it.
 - the browser outside containers (for redirects like http://host.docker.internal:9000/...).
 
-The alias **host.docker.internal** ensures both containers and the browser can reach the **auth-server**, and that tokens' iss (e.g., http://host.docker.internal:9000) matches what the **resource-server** is configured to trust.
+The alias **host.docker.internal** ensures both containers and the browser can reach the **auth-server** and that tokens' iss (e.g., http://host.docker.internal:9000) matches what the **resource-server** is configured to trust.
 
-Start the stack from inside **`stack`**:
+Start the stack from the repository root:
 ```zsh
-cd stack
 make build up
 ```
 
-- make build up → builds the images and then starts the stack.
+- make build up → builds the images and then starts the stack. Use this on a fresh checkout or after code changes.
 
 - make build → only builds the images.
 
-- make up → only starts the stack (reuses already built images).
+- make up → only starts the stack. Use this for later runs when the images already exist locally.
 
 ➡️ Open the client application in your browser:
 
@@ -108,8 +110,7 @@ Password: pass
 ### JVM (normal)
 To run normally with JDK 25 (same as pressing Run in IntelliJ):
 ```zsh
-cd auth-server
-./gradlew clean bootRun
+./gradlew :auth-server:bootRun
 ```
 
 ### GraalVM (native)
@@ -138,34 +139,33 @@ Understanding GraalVM versions:
 #### Native Image Build
 To compile as a native executable:
 ```zsh
-cd auth-server
-./gradlew clean nativeCompile
+./gradlew :auth-server:clean :auth-server:nativeCompile
 ```
 
 Run it directly:
 ```zsh
-./build/native/nativeCompile/auth-server
+./auth-server/build/native/nativeCompile/auth-server
 ```
 
 Shortcut (compile + run in one step):
 ```zsh
-./gradlew clean nativeRun
+./gradlew :auth-server:clean :auth-server:nativeRun
 ```
 
-### Docker Build (Paketo Buildpacks)
-This project uses Paketo Buildpacks via Spring Boot's bootBuildImage to produce OCI images. <br>
-By default, our Gradle task is configured to build native images, but you can choose to use JVM with a property.
+### Docker Build
+This project uses Spring Boot's `bootBuildImage` task to produce OCI images with Cloud Native Buildpacks. The modules currently configure Paketo builder images. <br>
+For a short explanation of Spring Boot build images, Paketo Buildpacks and Kaniko, see [Container Images](docs/container-images.md).
+
+By default, the Gradle task is configured to build native images, but you can choose to use JVM with a property.
 
 - Build native image (default) → Banner will show: "JVM :: Substrate VM..."
     ```zsh
-    cd auth-server
-    ./gradlew clean bootBuildImage -Pversion=DEV-SNAPSHOT
+    ./gradlew :auth-server:clean :auth-server:bootBuildImage -Pversion=DEV-SNAPSHOT
     ```
 
 - Build JVM image → Banner will show: "JVM :: OpenJDK 64-Bit Server VM..."
     ```zsh
-    cd auth-server
-    ./gradlew clean bootBuildImage -Pversion=DEV-SNAPSHOT -PBP_NATIVE_IMAGE=false
+    ./gradlew :auth-server:clean :auth-server:bootBuildImage -Pversion=DEV-SNAPSHOT -PBP_NATIVE_IMAGE=false
     ```
 
 Run it:
@@ -176,33 +176,45 @@ docker run --rm -p 9000:9000 \
 ```
 
 ## Gradle
-The project uses the Gradle wrapper (./gradlew).
+The project uses a root Gradle multi-project build with one wrapper (`./gradlew`). <br>
+Use module-qualified task names, for example `:auth-server:bootRun`, `:client-server:test` or `:resource-server:bootBuildImage`.
 
 Install Gradle locally:
 ```zsh
-sdk install gradle 9.5.0
-sdk default gradle 9.5.0
+sdk install gradle 9.5.1
+sdk default gradle 9.5.1
 gradle -v
 ```
 
-Update wrapper inside a service (e.g., auth-server):
+Update the root wrapper:
 ```zsh
-cd auth-server
-gradle wrapper --gradle-version 9.5.0
+gradle wrapper --gradle-version 9.5.1
 ./gradlew -v
 ```
 
 ## Make Commands
+
+The recommended local workflow uses `make` from the repository root. The root `Makefile` delegates to `stack/makefile`, which runs Gradle image builds and Docker Compose lifecycle commands. See [Stack Commands](docs/stack-commands.md) for the exact command mappings.
 
 - **make build-auth** → builds the `auth-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
 - **make build-client** → builds the `client-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
 - **make build-resource** → builds the `resource-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
 - **make down** → stops the Compose stack.
 - **make restart** → stops and then restarts the stack (`down` + `up`).
-- **make logs** → tails logs of all running services (`docker compose logs -f`).
+- **make logs** → tails logs for the whole stack (`docker compose logs -f`).
+- **make logs-auth** → tails logs for `auth-server`.
+- **make logs-client** → tails logs for `client-server`.
+- **make logs-resource** → tails logs for `resource-server`.
+- **make logs-db** → tails logs for `db`.
 - **make ps** → shows container status (`docker compose ps`).
-- **make db-reset** → stops the stack, deletes Postgres volumes, and restarts with a fresh database. <br> ⚠️ This wipes all local data.
-- **make check** → prints diagnostic info (image names, Compose version, whether `auth-server`, `client-server` and `resource-server` directories exist).
+- **make db-reset** → stops the stack, deletes Postgres volumes and restarts with a fresh database. <br> ⚠️ This wipes all local data.
+- **make check** → prints diagnostic info (image names, Compose version, root wrapper and module directories).
+
+## Project Notes
+
+- [OAuth2 and OIDC Overview](docs/oauth2-oidc-overview.md) explains the roles of `auth-server`, `client-server` and `resource-server`.
+- [Container Images](docs/container-images.md) explains Spring Boot build images, Paketo Buildpacks and Kaniko.
+- [Stack Commands](docs/stack-commands.md) maps `make` commands to the underlying Gradle and Docker Compose commands.
 
 ## Database Connection Details
 

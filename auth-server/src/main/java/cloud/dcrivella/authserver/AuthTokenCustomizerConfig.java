@@ -4,29 +4,35 @@ import cloud.dcrivella.authserver.config.TokenAudienceProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Registers token customization for access tokens to populate the {@code aud} claim
- * based on per-client configuration.
+ * Registers token customization for access tokens.
  * <p>
  * Reads {@link TokenAudienceProperties} (prefix {@code auth.token})
  * and, when a mapping exists for the current {@code clientId}, sets the JWT {@code aud}
- * claim to the configured list of audience values. No change is made for ID tokens or
- * when no mapping exists.
+ * claim to the configured list of audience values.
+ * <p>
+ * Access tokens are meant for resource servers, so OIDC login scopes such as
+ * {@code openid} and {@code profile} are removed from the access token {@code scope}
+ * claim. Those scopes remain part of the authorization request and ID token flow.
+ * No change is made for ID tokens.
  */
 @Configuration
 @EnableConfigurationProperties(TokenAudienceProperties.class)
 public class AuthTokenCustomizerConfig {
 
     /**
-     * Customizes access token claims to include the {@code aud} claim for clients
-     * that have a configured audience mapping. The claim is set as a list of strings
-     * to align with JWT conventions.
+     * Customizes access token claims to include the configured {@code aud} claim
+     * and expose only API scopes in the access token {@code scope} claim.
      */
     @Bean
     protected OAuth2TokenCustomizer<JwtEncodingContext> audienceTokenCustomizer(TokenAudienceProperties props) {
@@ -42,6 +48,19 @@ public class AuthTokenCustomizerConfig {
             if (clientAud != null && !clientAud.isEmpty()) {
                 context.getClaims().claim("aud", clientAud);
             }
+
+            Set<String> apiScopes = context.getAuthorizedScopes().stream()
+                    .filter(scope -> !OidcScopes.OPENID.equals(scope))
+                    .filter(scope -> !OidcScopes.PROFILE.equals(scope))
+                    .collect(Collectors.toCollection(java.util.TreeSet::new));
+
+            context.getClaims().claims(claims -> {
+                if (apiScopes.isEmpty()) {
+                    claims.remove(OAuth2ParameterNames.SCOPE);
+                } else {
+                    claims.put(OAuth2ParameterNames.SCOPE, String.join(" ", apiScopes));
+                }
+            });
         };
     }
 }

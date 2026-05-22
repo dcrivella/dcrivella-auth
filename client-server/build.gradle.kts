@@ -5,13 +5,12 @@ import org.gradle.kotlin.dsl.java
 
 plugins {
     java
-    id("org.springframework.boot") version "4.0.6"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "1.1.0"
-    id("org.asciidoctor.jvm.convert") version "4.0.5"
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.graalvm.buildtools)
+    alias(libs.plugins.asciidoctor.jvm.convert)
 }
 
-group = "cloud.dcrivella"
 version = (project.findProperty("version") as String?) ?: System.getenv("CLIENT_SERVER_IMAGE_TAG") ?: "DEV-SNAPSHOT"
 description = "client-server"
 
@@ -27,19 +26,15 @@ configurations {
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.security:spring-security-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation(libs.spring.boot.starter.oauth2.client)
+    implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.webflux)
+    implementation(libs.spring.boot.starter.thymeleaf)
+    developmentOnly(libs.spring.boot.devtools)
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.security.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test> {

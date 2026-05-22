@@ -5,13 +5,12 @@ import org.gradle.kotlin.dsl.java
 
 plugins {
     java
-    id("org.springframework.boot") version "4.0.6"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "1.1.0"
-    id("org.asciidoctor.jvm.convert") version "4.0.5"
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.graalvm.buildtools)
+    alias(libs.plugins.asciidoctor.jvm.convert)
 }
 
-group = "cloud.dcrivella"
 version = (project.findProperty("version") as String?) ?: System.getenv("RESOURCE_SERVER_IMAGE_TAG") ?: "DEV-SNAPSHOT"
 description = "resource-server"
 
@@ -27,16 +26,12 @@ configurations {
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation(libs.spring.boot.starter.oauth2.resource.server)
+    implementation(libs.spring.boot.starter.web)
+    developmentOnly(libs.spring.boot.devtools)
+    testImplementation(libs.spring.boot.starter.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test> {

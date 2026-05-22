@@ -1,3 +1,9 @@
+# This Makefile is a small convenience tool for the dcrivella-auth stack.
+# It keeps the repeated Gradle module image-build commands and Docker Compose
+# lifecycle commands in one place for the three independent service modules
+# that make up the dcrivella-auth Gradle project: auth-server, client-server,
+# and resource-server.
+
 # Load .env vars
 -include .env
 export AUTH_SERVER_IMAGE_TAG CLIENT_SERVER_IMAGE_TAG RESOURCE_SERVER_IMAGE_TAG \
@@ -11,15 +17,13 @@ AUTH_SERVER_IMAGE := $(AUTH_SERVER_IMAGE_NAME):$(AUTH_SERVER_IMAGE_TAG)
 CLIENT_SERVER_IMAGE := $(CLIENT_SERVER_IMAGE_NAME):$(CLIENT_SERVER_IMAGE_TAG)
 RESOURCE_SERVER_IMAGE := $(RESOURCE_SERVER_IMAGE_NAME):$(RESOURCE_SERVER_IMAGE_TAG)
 
-AUTH_SERVER_DIR := ../auth-server
-CLIENT_SERVER_DIR := ../client-server
-RESOURCE_SERVER_DIR := ../resource-server
+ROOT_DIR := ..
 
 COMPOSE := docker compose
 
 MAKEFLAGS += -rR   # disable built-in rules
 
-.PHONY: up down build build-auth build-client logs ps db-reset restart check
+.PHONY: up down build build-auth build-client build-resource logs logs-auth logs-client logs-resource logs-db ps db-reset restart check
 
 # ------------------------
 # Build targets
@@ -28,7 +32,7 @@ build: build-auth build-client build-resource
 
 build-auth:
 	@echo "==> Building auth-server image $(AUTH_SERVER_IMAGE)"
-	cd $(AUTH_SERVER_DIR) && ./gradlew clean bootBuildImage \
+	cd $(ROOT_DIR) && ./gradlew :auth-server:clean :auth-server:bootBuildImage \
 		-PBP_NATIVE_IMAGE=true \
 		-Pspring-boot.build-image.imageName=$(AUTH_SERVER_IMAGE) \
 		-Pversion=$(AUTH_SERVER_IMAGE_TAG)
@@ -36,7 +40,7 @@ build-auth:
 
 build-client:
 	@echo "==> Building client-server image $(CLIENT_SERVER_IMAGE)"
-	cd $(CLIENT_SERVER_DIR) && ./gradlew clean bootBuildImage \
+	cd $(ROOT_DIR) && ./gradlew :client-server:clean :client-server:bootBuildImage \
 		-PBP_NATIVE_IMAGE=true \
 		-Pspring-boot.build-image.imageName=$(CLIENT_SERVER_IMAGE) \
 		-Pversion=$(CLIENT_SERVER_IMAGE_TAG)
@@ -44,7 +48,7 @@ build-client:
 
 build-resource:
 	@echo "==> Building resource-server image $(RESOURCE_SERVER_IMAGE)"
-	cd $(RESOURCE_SERVER_DIR) && ./gradlew clean bootBuildImage \
+	cd $(ROOT_DIR) && ./gradlew :resource-server:clean :resource-server:bootBuildImage \
 		-PBP_NATIVE_IMAGE=true \
 		-Pspring-boot.build-image.imageName=$(RESOURCE_SERVER_IMAGE) \
 		-Pversion=$(RESOURCE_SERVER_IMAGE_TAG)
@@ -67,6 +71,18 @@ restart: down up
 logs:
 	$(COMPOSE) logs -f
 
+logs-auth:
+	$(COMPOSE) logs -f auth-server
+
+logs-client:
+	$(COMPOSE) logs -f client-server
+
+logs-resource:
+	$(COMPOSE) logs -f resource-server
+
+logs-db:
+	$(COMPOSE) logs -f db
+
 ps:
 	$(COMPOSE) ps
 
@@ -81,6 +97,7 @@ check:
 	@echo "CLIENT_SERVER_IMAGE    : $(CLIENT_SERVER_IMAGE)"
 	@echo "RESOURCE_SERVER_IMAGE  : $(RESOURCE_SERVER_IMAGE)"
 	@echo "Compose version        : $$($(COMPOSE) version 2>/dev/null | head -n1 || echo 'not found')"
-	@echo "Auth dir exists?       : $$( [ -d $(AUTH_SERVER_DIR) ] && echo yes || echo NO )"
-	@echo "Client dir exists?     : $$( [ -d $(CLIENT_SERVER_DIR) ] && echo yes || echo NO )"
-	@echo "Resource dir exists?   : $$( [ -d $(RESOURCE_SERVER_DIR) ] && echo yes || echo NO )"
+	@echo "Root Gradle wrapper?   : $$( [ -x $(ROOT_DIR)/gradlew ] && echo yes || echo NO )"
+	@echo "Auth module exists?    : $$( [ -d $(ROOT_DIR)/auth-server ] && echo yes || echo NO )"
+	@echo "Client module exists?  : $$( [ -d $(ROOT_DIR)/client-server ] && echo yes || echo NO )"
+	@echo "Resource module exists?: $$( [ -d $(ROOT_DIR)/resource-server ] && echo yes || echo NO )"

@@ -1,0 +1,9 @@
+# Keep Gradle wrapper scripts on the line endings expected by their platforms.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+**/gradlew text eol=lf
+**/gradlew.bat text eol=crlf
+
+# Gradle wrapper JARs are binary and must not be normalized.
+gradle/wrapper/gradle-wrapper.jar binary
+**/gradle/wrapper/gradle-wrapper.jar binary

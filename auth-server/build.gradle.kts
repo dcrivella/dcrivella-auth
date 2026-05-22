@@ -6,13 +6,12 @@ import org.gradle.kotlin.dsl.java
 
 plugins {
     java
-    id("org.springframework.boot") version "4.0.6"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "1.1.0"
-    id("org.asciidoctor.jvm.convert") version "4.0.5"
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.graalvm.buildtools)
+    alias(libs.plugins.asciidoctor.jvm.convert)
 }
 
-group = "cloud.dcrivella"
 version = (project.findProperty("version") as String?) ?: System.getenv("AUTH_SERVER_IMAGE_TAG") ?: "DEV-SNAPSHOT"
 description = "auth-server"
 
@@ -28,30 +27,26 @@ configurations {
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
 extra["snippetsDir"] = file("build/generated-snippets")
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-authorization-server")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.flywaydb:flyway-core")
-    implementation("org.flywaydb:flyway-database-postgresql")
-    compileOnly("org.projectlombok:lombok")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    runtimeOnly("org.postgresql:postgresql")
-    annotationProcessor("org.projectlombok:lombok")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.boot:spring-boot-testcontainers")
-    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
-    testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
-    testImplementation("org.testcontainers:testcontainers-postgresql")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.starter.oauth2.authorization.server)
+    implementation(libs.spring.boot.starter.security)
+    implementation(libs.spring.boot.starter.web)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
+    compileOnly(libs.lombok)
+    developmentOnly(libs.spring.boot.devtools)
+    runtimeOnly(libs.postgresql)
+    annotationProcessor(libs.lombok)
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.testcontainers)
+    testImplementation(libs.spring.restdocs.mockmvc)
+    testImplementation(libs.spring.security.test)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.postgresql)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test> {
