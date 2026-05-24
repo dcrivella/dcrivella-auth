@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: dcrivella-auth
+data:
+  ISSUER_URL: http://host.k3d.internal:9000
+  RESOURCE_SERVER_API_URL: http://resource-server:8081
+  AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_SERVER_PKCE_0: api://resource-server
+  RESOURCE_AUDIENCE: api://resource-server
+  AUTH_DB_SCHEMA: auth

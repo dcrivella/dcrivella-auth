@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dcrivella-auth
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - app-config.yaml
+  - auth-server-service.yaml
+  - auth-server-deployment.yaml
+  - client-server-service.yaml
+  - client-server-deployment.yaml
+  - resource-server-service.yaml
+  - resource-server-deployment.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: dcrivella-auth
+      environment: local
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: postgres-init
+    files:
+      - 001-provision_auth.sql

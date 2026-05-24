@@ -9,26 +9,30 @@ This repository is a single **Gradle multi-project build** with one root wrapper
 - **auth-server** → Spring Authorization Server (OIDC, OAuth2 flows)
 - **client-server** → Example web client (PKCE, Thymeleaf UI)
 - **resource-server** → Example API protected by JWT
-- **stack** → Docker Compose stack (Postgres + app services)
+- **infra** → Compose, k3d, Kubernetes manifests and shared local DB init scripts
 - **postman** → Postman collection and environment
 
 ```text
 dcrivella-auth/
-├─ Makefile                       # root helper that delegates to stack/makefile
-├─ auth-server/
-├─ client-server/
-├─ resource-server/
-├─ postman/
-│  ├─ dcrivella-auth.postman_collection.json
-│  └─ dcrivella-auth-LOCAL.postman_environment.json
-└─ stack/
-   ├─ compose.yaml                # base stack (db, auth, client, resource)
-   ├─ compose.override.yaml       # dev overrides: ports, profiles
-   ├─ .env                        # env vars used by compose files
-   ├─ makefile                    # helper commands for build/run
-   └─ db/
-      └─ init/
-         └─ 001-provision_auth.sql
+├─ Makefile                        # root entrypoint; delegates local runtime commands to infra/makefile
+├─ auth-server/                    # Spring Authorization Server module; issues OAuth2/OIDC tokens
+├─ client-server/                  # OAuth2/OIDC web client module; login UI and resource-server calls
+├─ resource-server/                # JWT-protected API module; validates issuer, audience and scopes
+├─ postman/                        # Postman collections for exercising the OAuth2/OIDC flows
+├─ infra/                          # local runtime infrastructure shared by Compose and k3d
+│  ├─ compose/                     # Docker Compose runtime definition
+│  │  ├─ compose.yml               # base Compose stack: Postgres, auth, client and resource services
+│  │  ├─ compose.override.yml      # local dev overrides: host ports and restart policy
+│  │  └─ .env                      # image tags, ports, issuer, DB credentials and audience values
+│  ├─ db/                          # database assets shared by all local runtime modes
+│  │  └─ init/                     # scripts mounted into the Postgres init directory
+│  │     └─ 001-provision_auth.sql # creates auth_server DB, auth schema and auth_user role
+│  ├─ k3d/                         # local Kubernetes cluster definition
+│  │  └─ cluster-config.yaml       # k3d cluster name, k3s image, ports, volume and kubeconfig behavior
+│  ├─ k8s/                         # Kubernetes manifests
+│  │  └─ overlays/                 # Kustomize environment overlays
+│  │     └─ local/                 # local k3d overlay, one resource/service per YAML file
+│  └─ makefile                     # implementation of build, Compose and k3d helper targets
 ```
 
 ## Prerequisites
@@ -37,6 +41,14 @@ dcrivella-auth/
 - macOS/Windows: Docker Desktop includes Compose v2
 
 - Linux: install Docker Engine + Compose plugin
+
+### Optional: k3d Kubernetes runtime
+Install these only if you want to run the stack in a local Kubernetes cluster instead of Docker Compose:
+
+- `k3d`
+- `kubectl` with Kustomize support for `kubectl apply -k`
+
+The k3d option uses the same application images built by Gradle, then imports them into the local k3d cluster.
 
 ### JDK with SDKMAN for local development
 We recommend [SDKMAN!](https://sdkman.io) to manage multiple JDK versions.
@@ -71,35 +83,88 @@ brew install make
 sudo apt install -y make
 ```
 
-## Quick Run
-⚠️ **host.docker.internal**
-```zsh
-echo "127.0.0.1 host.docker.internal" | sudo tee -a /etc/hosts
-ping host.docker.internal
-```
-OIDC redirects happen in the browser, not inside Docker.
-The browser is outside the Docker network, but your Authorization Server (AS) must use a hostname that works consistently for:
+## Local Host Aliases
+
+OIDC redirects happen in the browser, not only inside containers or pods. The Authorization Server issuer must use a hostname that works consistently for:
 
 - services inside containers (service-to-service calls / token validation), where the **"iss"** claim in minted JWTs must exactly match the issuer that validators are configured with (**issuer-uri**). <br>
 If you copy a token minted before (e.g., with iss = http://localhost:9000), the **resource-server** expecting http://host.docker.internal:9000 will reject it.
-- the browser outside containers (for redirects like http://host.docker.internal:9000/...).
+- the browser outside the runtime, for redirects to the Authorization Server.
 
-The alias **host.docker.internal** ensures both containers and the browser can reach the **auth-server** and that tokens' iss (e.g., http://host.docker.internal:9000) matches what the **resource-server** is configured to trust.
+Use the alias for the runtime you are starting:
+
+```zsh
+# Docker Compose issuer: http://host.docker.internal:9000
+grep host.docker.internal /etc/hosts || echo "127.0.0.1 host.docker.internal" | sudo tee -a /etc/hosts
+
+# k3d issuer: http://host.k3d.internal:9000
+grep host.k3d.internal /etc/hosts || echo "127.0.0.1 host.k3d.internal" | sudo tee -a /etc/hosts
+```
+
+Verify them when needed:
+
+```zsh
+getent hosts host.docker.internal
+getent hosts host.k3d.internal
+```
+
+## Quick Run With Docker Compose
+
+The Compose stack uses:
+
+```text
+ISSUER_URL=http://host.docker.internal:9000
+```
 
 Start the stack from the repository root:
 ```zsh
-make build up
+make compose-build-up
 ```
 
-- make build up → builds the images and then starts the stack. Use this on a fresh checkout or after code changes.
+- make compose-build-up → builds the images and then starts the Compose stack. Use this on a fresh checkout or after code changes.
 
 - make build → only builds the images.
 
-- make up → only starts the stack. Use this for later runs when the images already exist locally.
+- make compose-up → only starts the Compose stack. Use this for later runs when the images already exist locally.
 
 ➡️ Open the client application in your browser:
 
 http://localhost:8080
+```text
+Username: user
+Password: pass
+```
+
+## Quick Run With k3d
+The k3d option creates a local Kubernetes cluster and deploys the same services there:
+
+- Postgres as a `StatefulSet`
+- `auth-server`, `client-server` and `resource-server` as Kubernetes `Deployment`s
+- NodePort services exposed through k3d port mappings
+
+Do not run the Compose stack and k3d stack at the same time. Both modes expose the same host ports: `9000`, `8080`, `8081` and `5432`.
+
+The k3d manifests use:
+
+```text
+http://host.k3d.internal:9000
+```
+
+Start the k3d stack from the repository root:
+
+```zsh
+make k3d-build-up
+```
+
+- `make k3d-build-up` → builds the images, creates the cluster if needed, imports images into k3d and deploys Kubernetes manifests.
+- `make k3d-up` → creates the cluster if needed, imports already-built images and deploys manifests.
+- `make k3d-cluster-stop` / `make k3d-cluster-start` → stop/start the existing cluster without deleting Kubernetes resources.
+- `make k3d-cluster-down` → deletes the k3d cluster.
+
+Open the client application in your browser:
+
+http://localhost:8080
+
 ```text
 Username: user
 Password: pass
@@ -194,21 +259,49 @@ gradle wrapper --gradle-version 9.5.1
 
 ## Make Commands
 
-The recommended local workflow uses `make` from the repository root. The root `Makefile` delegates to `stack/makefile`, which runs Gradle image builds and Docker Compose lifecycle commands. See [Stack Commands](docs/stack-commands.md) for the exact command mappings.
+The recommended local workflow uses `make` from the repository root. The root `Makefile` delegates to `infra/makefile`, which runs Gradle image builds plus Compose and k3d lifecycle commands. See [Stack Commands](docs/stack-commands.md) for the exact command mappings.
+
+### Build Images
+
+Use these commands to generate the Docker/OCI images used by both Compose and k3d.
 
 - **make build-auth** → builds the `auth-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
 - **make build-client** → builds the `client-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
 - **make build-resource** → builds the `resource-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
-- **make down** → stops the Compose stack.
-- **make restart** → stops and then restarts the stack (`down` + `up`).
-- **make logs** → tails logs for the whole stack (`docker compose logs -f`).
-- **make logs-auth** → tails logs for `auth-server`.
-- **make logs-client** → tails logs for `client-server`.
-- **make logs-resource** → tails logs for `resource-server`.
-- **make logs-db** → tails logs for `db`.
-- **make ps** → shows container status (`docker compose ps`).
-- **make db-reset** → stops the stack, deletes Postgres volumes and restarts with a fresh database. <br> ⚠️ This wipes all local data.
-- **make check** → prints diagnostic info (image names, Compose version, root wrapper and module directories).
+
+### Compose Stack
+
+Use these commands to run the local stack with Docker Compose.
+
+- **make compose-build-up** → builds images and starts the Compose stack.
+- **make compose-up** → starts the Compose stack with already-built images.
+- **make compose-down** → stops/removes the Compose stack but preserves named volumes, including the Postgres DB volume.
+- **make compose-restart** → stops and then restarts the Compose stack.
+- **make compose-logs** → tails logs for the whole Compose stack.
+- **make compose-logs-auth** → tails Compose logs for `auth-server`.
+- **make compose-logs-client** → tails Compose logs for `client-server`.
+- **make compose-logs-resource** → tails Compose logs for `resource-server`.
+- **make compose-logs-db** → tails Compose logs for `db`.
+- **make compose-ps** → shows Compose container status.
+- **make compose-db-reset** → stops Compose, deletes Postgres volumes and restarts with a fresh database. <br> ⚠️ This wipes all local Compose data; use `make compose-down` if you want to keep the DB.
+- **make compose-check** → prints Compose diagnostic info.
+
+### k3d Cluster
+
+Use these commands to run the local stack in a k3d Kubernetes cluster.
+
+- **make k3d-build-up** → builds images, creates/starts the k3d cluster, imports images and deploys Kubernetes manifests.
+- **make k3d-up** → creates/starts the k3d cluster, imports already-built images and deploys Kubernetes manifests.
+- **make k3d-cluster-stop** → stops the k3d cluster without deleting Kubernetes resources.
+- **make k3d-cluster-start** → starts an existing k3d cluster.
+- **make k3d-cluster-down** → deletes the k3d cluster.
+- **make k3d-ps** → shows Kubernetes pods, services and PVCs.
+- **make k3d-logs** → tails logs for all k3d stack pods.
+- **make k3d-logs-auth** → tails k3d logs for `auth-server`.
+- **make k3d-logs-client** → tails k3d logs for `client-server`.
+- **make k3d-logs-resource** → tails k3d logs for `resource-server`.
+- **make k3d-logs-db** → tails k3d logs for Postgres.
+- **make k3d-db-reset** → deletes the k3d Postgres PVC and recreates Postgres. <br> ⚠️ This wipes the k3d database.
 
 ## Project Notes
 
@@ -224,6 +317,7 @@ The recommended local workflow uses `make` from the repository root. The root `M
 - **Password**: `auth_pass`
 - **Host**:
   - Inside Docker Compose → `db`
+  - Inside k3d/Kubernetes → `db.dcrivella-auth.svc.cluster.local` or `db`
   - From host machine → `localhost` (or `127.0.0.1`)
 - **Port**: `5432` (default PostgreSQL port)
 

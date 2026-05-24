@@ -11,6 +11,7 @@ out/
 .gradle-home/
 **/.gradle-home/
 build/
+infra/k8s/overlays/local/001-provision_auth.sql
 **/build/
 !**/src/main/**/build/
 !**/src/test/**/build/

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-server
+  namespace: dcrivella-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-server
+  template:
+    metadata:
+      labels:
+        app: auth-server
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z db 5432; do echo waiting for db; sleep 2; done"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+      containers:
+        - name: auth-server
+          image: dcrivella/auth-server:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9000
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: SERVER_PORT
+              value: "9000"
+            - name: ISSUER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ISSUER_URL
+            - name: AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_SERVER_PKCE_0
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_SERVER_PKCE_0
+            - name: AUTH_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: AUTH_DB_USER
+            - name: AUTH_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: AUTH_DB_PASSWORD
+            - name: AUTH_DB_SCHEMA
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: AUTH_DB_SCHEMA
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi

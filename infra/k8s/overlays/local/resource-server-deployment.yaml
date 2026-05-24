@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-server
+  namespace: dcrivella-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resource-server
+  template:
+    metadata:
+      labels:
+        app: resource-server
+    spec:
+      initContainers:
+        - name: wait-for-auth-server
+          image: busybox:1.36
+          command: ["sh", "-c", "until wget -q --spider http://auth-server:9000/.well-known/openid-configuration; do echo waiting for auth-server; sleep 2; done"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+      containers:
+        - name: resource-server
+          image: dcrivella/resource-server:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: SERVER_PORT
+              value: "8081"
+            - name: ISSUER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ISSUER_URL
+            - name: RESOURCE_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RESOURCE_AUDIENCE
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi

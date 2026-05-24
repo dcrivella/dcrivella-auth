@@ -10,7 +10,7 @@ services:
       POSTGRES_DB: bootstrap
     volumes:
       - db-data:/var/lib/postgresql
-      - ./db/init:/docker-entrypoint-initdb.d
+      - ../db/init:/docker-entrypoint-initdb.d
     networks:
       - server-side      
     healthcheck:

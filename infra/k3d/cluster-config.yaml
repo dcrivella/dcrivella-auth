@@ -1,0 +1,39 @@
+# k3d cluster config for the local dcrivella-auth Kubernetes stack.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: dcrivella-auth
+
+servers: 1
+agents: 0
+
+image: rancher/k3s:v1.36.1-k3s1
+network: dcrivella-auth-net
+
+ports:
+  - port: "9000:30900" # auth-server NodePort
+    nodeFilters:
+      - server:0
+  - port: "8080:30080" # client-server NodePort
+    nodeFilters:
+      - server:0
+  - port: "8081:30081" # resource-server NodePort
+    nodeFilters:
+      - server:0
+  - port: "5432:30543" # Postgres NodePort
+    nodeFilters:
+      - server:0
+
+volumes:
+  - volume: $HOME/.k3d-dcrivella-auth/data:/var/lib/rancher/k3s/storage
+    nodeFilters:
+      - server:*
+
+options:
+  k3d:
+    wait: true
+    timeout: "60s"
+    disableLoadbalancer: false
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

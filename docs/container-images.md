@@ -30,7 +30,7 @@ Use Kaniko when you need full Dockerfile control or your CI cannot run a Docker 
 
 ## How This Repo Builds Images
 
-The root `Makefile` delegates image builds to `stack/makefile`. The stack makefile runs module-qualified Gradle tasks such as:
+The root `Makefile` delegates image builds to `infra/makefile`. The infra makefile runs module-qualified Gradle tasks such as:
 
 ```zsh
 ./gradlew :auth-server:clean :auth-server:bootBuildImage \
