@@ -1,340 +1,557 @@
 {
-	"info": {
-		"_postman_id": "b55a2b99-7913-4100-964e-de74f48395e1",
-		"name": "dcrivella-auth",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "40828137"
-	},
-	"item": [
-		{
-			"name": "getToken-client-credentials",
-			"request": {
-				"auth": {
-					"type": "basic",
-					"basic": [
-						{
-							"key": "username",
-							"value": "client-m2m",
-							"type": "string"
-						},
-						{
-							"key": "password",
-							"value": "secret2",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "urlencoded",
-					"urlencoded": [
-						{
-							"key": "grant_type",
-							"value": "client_credentials",
-							"type": "text"
-						},
-						{
-							"key": "scope",
-							"value": "api.read",
-							"type": "text"
-						}
-					]
-				},
-				"url": {
-					"raw": "{{base-auth-url}}/oauth2/token",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						"oauth2",
-						"token"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getToken-oauth2-user",
-			"request": {
-				"auth": {
-					"type": "oauth2",
-					"oauth2": [
-						{
-							"key": "scope",
-							"value": "openid profile api.read",
-							"type": "string"
-						},
-						{
-							"key": "useBrowser",
-							"value": false,
-							"type": "boolean"
-						},
-						{
-							"key": "clientSecret",
-							"value": "secret1",
-							"type": "string"
-						},
-						{
-							"key": "clientId",
-							"value": "client-postman-confidential",
-							"type": "string"
-						},
-						{
-							"key": "redirect_uri",
-							"value": "https://oauth.pstmn.io/v1/callback",
-							"type": "string"
-						},
-						{
-							"key": "tokenName",
-							"value": "CLIENT_TOKEN",
-							"type": "string"
-						},
-						{
-							"key": "addTokenTo",
-							"value": "header",
-							"type": "string"
-						},
-						{
-							"key": "accessTokenUrl",
-							"value": "{{base-auth-url}}/oauth2/token",
-							"type": "string"
-						},
-						{
-							"key": "authUrl",
-							"value": "{{base-auth-url}}/oauth2/authorize",
-							"type": "string"
-						}
-					]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base-auth-url}}/userinfo",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						"userinfo"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getToken-oauth2-user-PKCE",
-			"request": {
-				"auth": {
-					"type": "oauth2",
-					"oauth2": [
-						{
-							"key": "scope",
-							"value": "openid profile api.read",
-							"type": "string"
-						},
-						{
-							"key": "clientId",
-							"value": "client-server-postman-pkce",
-							"type": "string"
-						},
-						{
-							"key": "client_authentication",
-							"value": "body",
-							"type": "string"
-						},
-						{
-							"key": "redirect_uri",
-							"value": "https://oauth.pstmn.io/v1/callback",
-							"type": "string"
-						},
-						{
-							"key": "tokenName",
-							"value": "SPA_PKCE_TOKEN",
-							"type": "string"
-						},
-						{
-							"key": "clientSecret",
-							"value": "",
-							"type": "string"
-						},
-						{
-							"key": "grant_type",
-							"value": "authorization_code_with_pkce",
-							"type": "string"
-						},
-						{
-							"key": "useBrowser",
-							"value": false,
-							"type": "boolean"
-						},
-						{
-							"key": "addTokenTo",
-							"value": "header",
-							"type": "string"
-						},
-						{
-							"key": "accessTokenUrl",
-							"value": "{{base-auth-url}}/oauth2/token",
-							"type": "string"
-						},
-						{
-							"key": "authUrl",
-							"value": "{{base-auth-url}}/oauth2/authorize",
-							"type": "string"
-						}
-					]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base-auth-url}}/userinfo",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						"userinfo"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "refreshToken-oauth2-user",
-			"request": {
-				"auth": {
-					"type": "basic",
-					"basic": [
-						{
-							"key": "password",
-							"value": "secret1",
-							"type": "string"
-						},
-						{
-							"key": "username",
-							"value": "client-postman-confidential",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "urlencoded",
-					"urlencoded": [
-						{
-							"key": "grant_type",
-							"value": "refresh_token",
-							"type": "text"
-						},
-						{
-							"key": "refresh_token",
-							"value": "gWdemwI6oxLgEWYpNgDHDIz9oX2LsSzWrFTa_8QDU9O0X5WipRDDt4iGtAZVId6k-KGefCJVfulVTId77PdOxFzWvIH3kMQXn0Ukz5fRtwdyGPrIQKxNE9WUebnAauO_",
-							"type": "text"
-						}
-					]
-				},
-				"url": {
-					"raw": "{{base-auth-url}}/oauth2/token",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						"oauth2",
-						"token"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getResourceServerTasks",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "",
-							"type": "string"
-						}
-					]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base-resource-server-url}}/tasks",
-					"host": [
-						"{{base-resource-server-url}}"
-					],
-					"path": [
-						"tasks"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "oidc-discover",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base-auth-url}}/.well-known/openid-configuration",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						".well-known",
-						"openid-configuration"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getUserInfo",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "",
-							"type": "string"
-						}
-					]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base-auth-url}}/userinfo",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						"userinfo"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getJWKS",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base-auth-url}}/oauth2/jwks",
-					"host": [
-						"{{base-auth-url}}"
-					],
-					"path": [
-						"oauth2",
-						"jwks"
-					]
-				}
-			},
-			"response": []
-		}
-	]
+  "info": {
+    "_postman_id": "b55a2b99-7913-4100-964e-de74f48395e1",
+    "name": "dcrivella-auth",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "40828137"
+  },
+  "item": [
+    {
+      "name": "01 - Service Account / Machine-to-Machine",
+      "item": [
+        {
+          "name": "Service account token - client credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('service account token request succeeds', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('response contains access token', function () {",
+                  "  pm.expect(body.access_token, 'access_token').to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "if (body.access_token) {",
+                  "  pm.environment.set('access_token', body.access_token);",
+                  "  pm.environment.set('active_token_source', 'service-account');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "client-m2m",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "secret2",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials",
+                  "type": "text"
+                },
+                {
+                  "key": "scope",
+                  "value": "api.read",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base-auth-url}}/oauth2/token",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            },
+            "description": "Client credentials flow for machine-to-machine calls. Sets the shared access_token environment variable; this flow does not issue a refresh_token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - User OAuth / Confidential Client",
+      "item": [
+        {
+          "name": "User OAuth token - confidential client with client secret",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const authorization = pm.request.headers.get('Authorization');",
+                  "",
+                  "pm.test('confidential userinfo succeeds', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('request contains bearer token', function () {",
+                  "  pm.expect(authorization, 'Authorization header').to.match(/^Bearer\\s+.+/);",
+                  "});",
+                  "",
+                  "if (authorization && /^Bearer\\s+/i.test(authorization)) {",
+                  "  const token = authorization.replace(/^Bearer\\s+/i, '');",
+                  "  pm.environment.set('access_token', token);",
+                  "  pm.environment.set('active_token_source', 'confidential-oauth');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "useBrowser",
+                  "value": false,
+                  "type": "boolean"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile api.read offline_access",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "clientSecret",
+                  "value": "secret1",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "client-postman-confidential",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "https://oauth.pstmn.io/v1/callback",
+                  "type": "string"
+                },
+                {
+                  "key": "tokenName",
+                  "value": "CONFIDENTIAL_USER_TOKEN",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{base-auth-url}}/oauth2/token",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{base-auth-url}}/oauth2/authorize",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base-auth-url}}/userinfo",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "userinfo"
+              ]
+            },
+            "description": "Use Postman's OAuth 2.0 helper to obtain a confidential-client user access token. Sending this /userinfo request copies the generated Bearer token into the shared access_token environment variable for /tasks and other token consumers."
+          },
+          "response": []
+        },
+        {
+          "name": "Manual refresh - confidential client using env refresh_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('confidential refresh succeeds', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('response contains access token', function () {",
+                  "  pm.expect(body.access_token, 'access_token').to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "if (body.access_token) {",
+                  "  pm.environment.set('access_token', body.access_token);",
+                  "  pm.environment.set('active_token_source', 'confidential-refresh');",
+                  "}",
+                  "",
+                  "if (body.refresh_token) {",
+                  "  pm.environment.set('refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "client-postman-confidential",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "secret1",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token",
+                  "type": "text"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base-auth-url}}/oauth2/token",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            },
+            "description": "Refresh the current confidential-client user token using the shared refresh_token environment variable. On success it updates access_token and rotates refresh_token when the server returns a new value."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - User OAuth / Confidential Client + PKCE",
+      "item": [
+        {
+          "name": "User OAuth token - confidential client with PKCE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const authorization = pm.request.headers.get('Authorization');",
+                  "",
+                  "pm.test('PKCE userinfo succeeds', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('request contains bearer token', function () {",
+                  "  pm.expect(authorization, 'Authorization header').to.match(/^Bearer\\s+.+/);",
+                  "});",
+                  "",
+                  "if (authorization && /^Bearer\\s+/i.test(authorization)) {",
+                  "  const token = authorization.replace(/^Bearer\\s+/i, '');",
+                  "  pm.environment.set('access_token', token);",
+                  "  pm.environment.set('active_token_source', 'pkce-oauth');",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "useBrowser",
+                  "value": false,
+                  "type": "boolean"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile api.read offline_access",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "client-server-postman-pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "https://oauth.pstmn.io/v1/callback",
+                  "type": "string"
+                },
+                {
+                  "key": "tokenName",
+                  "value": "PKCE_USER_TOKEN",
+                  "type": "string"
+                },
+                {
+                  "key": "clientSecret",
+                  "value": "secret-postman-pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{base-auth-url}}/oauth2/token",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{base-auth-url}}/oauth2/authorize",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base-auth-url}}/userinfo",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "userinfo"
+              ]
+            },
+            "description": "Use Postman's OAuth 2.0 helper to obtain a confidential-client + PKCE user access token. Sending this /userinfo request copies the generated Bearer token into the shared access_token environment variable for /tasks and other token consumers."
+          },
+          "response": []
+        },
+        {
+          "name": "Manual refresh - PKCE client using env refresh_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('PKCE refresh succeeds', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('response contains access token', function () {",
+                  "  pm.expect(body.access_token, 'access_token').to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "if (body.access_token) {",
+                  "  pm.environment.set('access_token', body.access_token);",
+                  "  pm.environment.set('active_token_source', 'pkce-refresh');",
+                  "}",
+                  "",
+                  "if (body.refresh_token) {",
+                  "  pm.environment.set('refresh_token', body.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "client-server-postman-pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "secret-postman-pkce",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "grant_type",
+                  "value": "refresh_token"
+                },
+                {
+                  "type": "text",
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base-auth-url}}/oauth2/token",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            },
+            "description": "Refresh the current confidential + PKCE user token using the shared refresh_token environment variable. On success it updates access_token and rotates refresh_token when the server returns a new value."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Token Consumers",
+      "item": [
+        {
+          "name": "Call /tasks with environment access_token",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base-resource-server-url}}/tasks",
+              "host": [
+                "{{base-resource-server-url}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "Consumes the current access_token environment variable. Token-producing requests are responsible for setting it."
+          },
+          "response": []
+        },
+        {
+          "name": "Call /userinfo with environment access_token",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base-auth-url}}/userinfo",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "userinfo"
+              ]
+            },
+            "description": "Consumes the current access_token environment variable. Token-producing requests are responsible for setting it."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Discovery",
+      "item": [
+        {
+          "name": "OIDC discovery document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base-auth-url}}/.well-known/openid-configuration",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                ".well-known",
+                "openid-configuration"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "JWKS signing keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base-auth-url}}/oauth2/jwks",
+              "host": [
+                "{{base-auth-url}}"
+              ],
+              "path": [
+                "oauth2",
+                "jwks"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
 }

@@ -16,7 +16,7 @@ public class SecurityFilterConfig {
 
     @Bean
     @Order(1)
-    protected SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    protected SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) {
         OAuth2AuthorizationServerConfigurer as =
                 new OAuth2AuthorizationServerConfigurer();
         RequestMatcher endpointsMatcher = as.getEndpointsMatcher();
@@ -40,7 +40,7 @@ public class SecurityFilterConfig {
 
     @Bean
     @Order(2)
-    protected SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+    protected SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
         http.authorizeHttpRequests(authorize -> authorize //
                         .requestMatchers("/error", "/login", "/default-ui.css", "/favicon.ico").permitAll() //
                         .anyRequest().authenticated()) //

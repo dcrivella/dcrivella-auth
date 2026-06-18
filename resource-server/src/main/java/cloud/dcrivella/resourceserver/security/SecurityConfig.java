@@ -40,7 +40,7 @@ public class SecurityConfig {
      * a small allowlist and to use JWT Bearer token authentication.
      */
     @Bean
-    protected SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> jwtDecoderProvider) throws Exception {
+    protected SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> jwtDecoderProvider) {
         http //
                 .authorizeHttpRequests(auth -> auth //
                         .requestMatchers("/actuator/**", "/error").permitAll() //
@@ -56,9 +56,8 @@ public class SecurityConfig {
 
     /**
      * Creates a {@link JwtDecoder} that validates the issuer and, optionally, the audience.
-     * Audience value is read from the property
-     * {@code spring.security.oauth2.resourceserver.jwt.audience}. If not set,
-     * audience validation is skipped.
+     * Audience value is read from the property {@code spring.security.oauth2.resourceserver.jwt.audience}.
+     * If not set, audience validation is skipped.
      */
     @Bean
     @ConditionalOnProperty(prefix = "spring.security.oauth2.resourceserver.jwt", name = "issuer-uri")

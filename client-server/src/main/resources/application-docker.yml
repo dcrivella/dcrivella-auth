@@ -17,11 +17,12 @@ spring:
           client-server-pkce-oidc:
             provider: spring
             client-id: client-server-pkce
-            client-authentication-method: none
+            client-secret: secret-client-server
+            client-authentication-method: client_secret_basic
             authorization-grant-type: authorization_code
             # Spring compute it from the public base URL seen by the browser
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: openid, profile, api.read
+            scope: openid, profile, api.read, offline_access
         provider:
           spring:
             # The client-server container must reach the AS on the host

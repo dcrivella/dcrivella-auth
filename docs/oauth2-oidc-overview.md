@@ -974,9 +974,9 @@ Not every client gets a refresh token. The auth server decides per registered cl
 
 In this project:
 
-- `client-server-pkce`: supports refresh tokens. It is a browser login client using authorization code + PKCE.
+- `client-server-pkce`: supports refresh tokens. It is a confidential browser login client using authorization code + PKCE.
 - `client-postman-confidential`: supports refresh tokens. It is a confidential client with a client secret.
-- `client-server-postman-pkce`: does not support refresh tokens. It is a short Postman PKCE example.
+- `client-server-postman-pkce`: supports refresh tokens. It is a confidential Postman client using authorization code + PKCE.
 - `client-m2m`: does not support refresh tokens. It uses `client_credentials`, so there is no human login session to continue.
 
 Machine-to-machine clients do not need refresh tokens in the same way. They authenticate directly with their own client credentials and can request a new access token when needed:
@@ -1489,9 +1489,9 @@ PKCE protects the authorization code flow. The client creates a temporary secret
 
 This helps prevent stolen authorization codes from being exchanged by an attacker.
 
-In this project, `client-server-pkce` is a public client:
+In this project, `client-server-pkce` is a confidential client using PKCE:
 
-- it has no client secret
+- it has a client secret
 - it uses authorization code flow
 - it requires PKCE
 

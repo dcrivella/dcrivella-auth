@@ -18,6 +18,7 @@ import java.util.UUID;
 public class ClientStoreConfig {
 
     private static final String POSTMAN_REDIRECT_URI = "https://oauth.pstmn.io/v1/callback";
+    private static final String SCOPE_OFFLINE_ACCESS = "offline_access";
     private static final String SCOPE_API_READ = "api.read";
 
     @Bean
@@ -30,27 +31,32 @@ public class ClientStoreConfig {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN) //
                 .redirectUri(POSTMAN_REDIRECT_URI) //
-                .scope(OidcScopes.OPENID) //
-                .scope(OidcScopes.PROFILE) //
+                .scope(OidcScopes.OPENID) // enable OIDC login and ID token issuance
+                .scope(OidcScopes.PROFILE) // allow profile claims such as name, given_name and family_name
+                .scope(SCOPE_OFFLINE_ACCESS) // allow issuing refresh tokens after user consent
+                .scope(SCOPE_API_READ) // allow calling the resource-server
                 .clientSettings(ClientSettings.builder() //
                         .requireAuthorizationConsent(false) // user consent not required
                         .requireProofKey(false) // confidential client
                         .build()) //
                 .tokenSettings(TokenSettings.builder() //
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
-                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // default: 60m
-                        .reuseRefreshTokens(false) // rotate refresh tokens
+                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // refresh token expires after 60 minutes
+                        .reuseRefreshTokens(false) // issue a new refresh token on refresh and invalidate the old one
                         .build()) //
                 .build();
 
-        // PKCE Postman client - no secret + NONE auth method
+        // Postman authorization-code client: confidential client + PKCE.
         RegisteredClient pkcePostmanClient = RegisteredClient.withId(UUID.randomUUID().toString()) //
                 .clientId("client-server-postman-pkce") //
-                .clientAuthenticationMethod(ClientAuthenticationMethod.NONE) //
+                .clientSecret("{noop}secret-postman-pkce") //
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC) //
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN) //
                 .redirectUri(POSTMAN_REDIRECT_URI) //
-                .scope(OidcScopes.OPENID) //
-                .scope(OidcScopes.PROFILE) //
+                .scope(OidcScopes.OPENID) // enable OIDC login and ID token issuance
+                .scope(OidcScopes.PROFILE) // allow profile claims such as name, given_name and family_name
+                .scope(SCOPE_OFFLINE_ACCESS) // allow issuing refresh tokens after user consent
                 .scope(SCOPE_API_READ) // allow calling the resource-server
                 .clientSettings(ClientSettings.builder() //
                         .requireAuthorizationConsent(true) //
@@ -58,20 +64,24 @@ public class ClientStoreConfig {
                         .build()) //
                 .tokenSettings(TokenSettings.builder() //
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
+                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // refresh token expires after 60 minutes
+                        .reuseRefreshTokens(false) // issue a new refresh token on refresh and invalidate the old one
                         .build()) //
                 .build();
 
-        // PKCE(Proof Key for Code Exchange) client - no secret + NONE auth method
+        // Server-side web client: confidential client + PKCE.
         RegisteredClient pkceClient = RegisteredClient.withId(UUID.randomUUID().toString()) //
                 .clientId("client-server-pkce") //
-                .clientAuthenticationMethod(ClientAuthenticationMethod.NONE) //
+                .clientSecret("{noop}secret-client-server") //
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC) //
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN) //
                 // No need to add http://auth-server:9000/... as redirect login/logout URIs because redirects happen in the browser, not inside the containers.
                 .redirectUri("http://localhost:8080/login/oauth2/code/client-server-pkce-oidc") //
                 .postLogoutRedirectUri("http://localhost:8080/") //
-                .scope(OidcScopes.OPENID) //
-                .scope(OidcScopes.PROFILE) //
+                .scope(OidcScopes.OPENID) // enable OIDC login and ID token issuance
+                .scope(OidcScopes.PROFILE) // allow profile claims such as name, given_name and family_name
+                .scope(SCOPE_OFFLINE_ACCESS) // allow issuing refresh tokens after user consent
                 .scope(SCOPE_API_READ) // allow calling the resource-server
                 .clientSettings(ClientSettings.builder() //
                         .requireAuthorizationConsent(true) //
@@ -79,8 +89,8 @@ public class ClientStoreConfig {
                         .build()) //
                 .tokenSettings(TokenSettings.builder() //
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
-                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // public client: keep refresh tokens short
-                        .reuseRefreshTokens(false) // public client: rotate refresh tokens
+                        .refreshTokenTimeToLive(Duration.ofMinutes(60)) // refresh token expires after 60 minutes
+                        .reuseRefreshTokens(false) // issue a new refresh token on refresh and invalidate the old one
                         .build()) //
                 .build();
 

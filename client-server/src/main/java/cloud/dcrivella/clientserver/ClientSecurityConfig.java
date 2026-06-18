@@ -11,7 +11,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class ClientSecurityConfig {
 
     @Bean
-    protected SecurityFilterChain client(HttpSecurity http, ClientRegistrationRepository clients) throws Exception {
+    protected SecurityFilterChain client(HttpSecurity http, ClientRegistrationRepository clients) {
         // Redirect to AS end_session_endpoint with id_token_hint
         var oidcLogout = new OidcClientInitiatedLogoutSuccessHandler(clients);
         oidcLogout.setPostLogoutRedirectUri("{baseUrl}/"); // or /home
