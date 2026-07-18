@@ -24,8 +24,7 @@ public class ClientStoreConfig {
     @Bean
     protected RegisteredClientRepository registeredClientRepository() {
         // Web confidential client - keeps its secret
-        RegisteredClient postmanConfidential = RegisteredClient.withId(UUID.randomUUID().toString())
-                .clientId("client-postman-confidential") //
+        RegisteredClient postmanConfidential = RegisteredClient.withId(UUID.randomUUID().toString()).clientId("client-postman-confidential") //
                 .clientSecret("{noop}secret1") //
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC) //
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
@@ -76,7 +75,8 @@ public class ClientStoreConfig {
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC) //
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN) //
-                // No need to add http://auth-server:9000/... as redirect login/logout URIs because redirects happen in the browser, not inside the containers.
+                // No need to add http://auth-server:9000/... as redirect login/logout URIs because redirects happen in the browser, not
+                // inside the containers.
                 .redirectUri("http://localhost:8080/login/oauth2/code/client-server-pkce-oidc") //
                 .postLogoutRedirectUri("http://localhost:8080/") //
                 .scope(OidcScopes.OPENID) // enable OIDC login and ID token issuance
@@ -106,7 +106,6 @@ public class ClientStoreConfig {
                         .build()) //
                 .build();
 
-        return new InMemoryRegisteredClientRepository(postmanConfidential, pkceClient, pkcePostmanClient,
-                machineClient);
+        return new InMemoryRegisteredClientRepository(postmanConfidential, pkceClient, pkcePostmanClient, machineClient);
     }
 }

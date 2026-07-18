@@ -17,8 +17,7 @@ public class SecurityFilterConfig {
     @Bean
     @Order(1)
     protected SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) {
-        OAuth2AuthorizationServerConfigurer as =
-                new OAuth2AuthorizationServerConfigurer();
+        OAuth2AuthorizationServerConfigurer as = new OAuth2AuthorizationServerConfigurer();
         RequestMatcher endpointsMatcher = as.getEndpointsMatcher();
 
         http
@@ -42,8 +41,8 @@ public class SecurityFilterConfig {
     @Order(2)
     protected SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
         http.authorizeHttpRequests(authorize -> authorize //
-                        .requestMatchers("/error", "/login", "/default-ui.css", "/favicon.ico").permitAll() //
-                        .anyRequest().authenticated()) //
+                .requestMatchers("/error", "/login", "/default-ui.css", "/favicon.ico").permitAll() //
+                .anyRequest().authenticated()) //
                 .formLogin(withDefaults()); // Local login form for the AS
         return http.build();
     }

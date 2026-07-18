@@ -6,8 +6,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 /**
- * Test override to avoid network calls for OIDC discovery/JWKs.
- * Provides a no-op JwtDecoder so the application context can load.
+ * Test override to avoid network calls for OIDC discovery/JWKs. Provides a no-op JwtDecoder so the application context can load.
  */
 @TestConfiguration
 public class TestSecurityConfig {

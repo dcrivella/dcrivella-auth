@@ -1,0 +1,315 @@
+# dcrivella-auth — reproducible toolchain and local development tasks.
+# Usage: mise install; mise tasks; mise run <task>
+
+[tools]
+java = "temurin-25"
+k3d = "5.9.0"
+kustomize = "5.8.1"
+kubectl = "1.36.2"
+
+# Gradle lifecycle
+
+[tasks.build]
+description = "Build and test all Gradle subprojects"
+run = "./gradlew build"
+
+[tasks.test]
+description = "Run all tests"
+run = "./gradlew test"
+
+[tasks.clean]
+description = "Clean all Gradle build outputs"
+run = "./gradlew clean"
+
+[tasks.format]
+description = "Format source and configuration files with Spotless"
+run = "./gradlew spotlessApply"
+
+[tasks.lint]
+description = "Check source and configuration formatting with Spotless"
+run = "./gradlew spotlessCheck"
+
+[tasks."dev:auth"]
+description = "Run the authorization server locally"
+run = "./gradlew :auth-server:bootRun"
+
+[tasks."dev:client"]
+description = "Run the OAuth2 client locally"
+run = "./gradlew :client-server:bootRun"
+
+[tasks."dev:resource"]
+description = "Run the resource server locally"
+run = "./gradlew :resource-server:bootRun"
+
+# Container images
+
+[tasks."image:build"]
+description = "Build all native application images sequentially"
+run = '''
+set -eu
+mise run image:build:auth
+mise run image:build:client
+mise run image:build:resource
+'''
+
+[tasks."image:build:auth"]
+description = "Build the auth-server native image"
+run = '''
+set -eu
+set -a; . infra/compose/.env; set +a
+image_name="${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
+echo "==> Building auth-server image ${image_name}"
+./gradlew :auth-server:clean :auth-server:bootBuildImage \
+  -PBP_NATIVE_IMAGE=true \
+  -Pspring-boot.build-image.imageName="${image_name}" \
+  -Pversion="${AUTH_SERVER_IMAGE_TAG}"
+'''
+
+[tasks."image:build:client"]
+description = "Build the client-server native image"
+run = '''
+set -eu
+set -a; . infra/compose/.env; set +a
+image_name="${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
+echo "==> Building client-server image ${image_name}"
+./gradlew :client-server:clean :client-server:bootBuildImage \
+  -PBP_NATIVE_IMAGE=true \
+  -Pspring-boot.build-image.imageName="${image_name}" \
+  -Pversion="${CLIENT_SERVER_IMAGE_TAG}"
+'''
+
+[tasks."image:build:resource"]
+description = "Build the resource-server native image"
+run = '''
+set -eu
+set -a; . infra/compose/.env; set +a
+image_name="${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
+echo "==> Building resource-server image ${image_name}"
+./gradlew :resource-server:clean :resource-server:bootBuildImage \
+  -PBP_NATIVE_IMAGE=true \
+  -Pspring-boot.build-image.imageName="${image_name}" \
+  -Pversion="${RESOURCE_SERVER_IMAGE_TAG}"
+'''
+
+# Docker Compose
+
+[tasks."compose:build-up"]
+description = "Build all images and start the Compose stack"
+run = '''
+set -eu
+mise run image:build
+mise run compose:up
+'''
+
+[tasks."compose:up"]
+description = "Start the Compose stack with existing images"
+run = '''
+docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml up -d --remove-orphans
+echo "==> Stack is up. Run 'mise run compose:ps' or 'mise run compose:logs' to inspect."
+'''
+
+[tasks."compose:down"]
+description = "Stop the Compose stack while preserving named volumes"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml down"
+
+[tasks."compose:restart"]
+description = "Restart the Compose stack"
+run = '''
+set -eu
+mise run compose:down
+mise run compose:up
+'''
+
+[tasks."compose:logs"]
+description = "Follow logs from the full Compose stack"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f"
+
+[tasks."compose:logs:auth"]
+description = "Follow auth-server Compose logs"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f auth-server"
+
+[tasks."compose:logs:client"]
+description = "Follow client-server Compose logs"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f client-server"
+
+[tasks."compose:logs:resource"]
+description = "Follow resource-server Compose logs"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f resource-server"
+
+[tasks."compose:logs:db"]
+description = "Follow Postgres Compose logs"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f db"
+
+[tasks."compose:ps"]
+description = "Show Compose service status"
+run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml ps"
+
+[tasks."compose:db-reset"]
+description = "Delete the Compose database volume and start a fresh stack"
+run = '''
+set -eu
+echo "!! This will delete Compose DB volumes. Ctrl+C to abort, or wait 3s..."
+sleep 3
+docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml down -v
+mise run compose:up
+'''
+
+[tasks."compose:check"]
+description = "Print resolved image and Compose diagnostics"
+run = '''
+set -eu
+set -a; . infra/compose/.env; set +a
+echo "AUTH_SERVER_IMAGE      : ${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
+echo "CLIENT_SERVER_IMAGE    : ${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
+echo "RESOURCE_SERVER_IMAGE  : ${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
+printf "Compose version        : "; docker compose version
+echo "Root Gradle wrapper?   : $( [ -x ./gradlew ] && echo yes || echo NO )"
+echo "Auth module exists?    : $( [ -d auth-server ] && echo yes || echo NO )"
+echo "Client module exists?  : $( [ -d client-server ] && echo yes || echo NO )"
+echo "Resource module exists?: $( [ -d resource-server ] && echo yes || echo NO )"
+'''
+
+# k3d / Kubernetes
+
+[tasks."k3d:build-up"]
+description = "Build images, create or start the k3d cluster, and deploy"
+run = '''
+set -eu
+mise run image:build
+mise run k3d:up
+'''
+
+[tasks."k3d:up"]
+description = "Create or start the k3d cluster, load existing images, and deploy"
+run = '''
+set -eu
+mise run k3d:cluster-up
+mise run k3d:load
+mise run k3d:deploy
+'''
+
+[tasks."k3d:cluster-up"]
+description = "Create the local k3d cluster when it does not exist"
+run = '''
+set -eu
+cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
+mkdir -p "${HOME}/.k3d-dcrivella-auth/data"
+if k3d cluster list | awk -v name="${cluster_name}" 'NR > 1 && $1 == name { found=1 } END { exit !found }'; then
+  echo "==> k3d cluster ${cluster_name} already exists"
+  k3d cluster start "${cluster_name}"
+else
+  k3d cluster create --config infra/k3d/cluster-config.yaml
+fi
+kubectl config use-context "k3d-${cluster_name}"
+'''
+
+[tasks."k3d:cluster-down"]
+description = "Delete the local k3d cluster"
+run = '''
+cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
+echo "==> Deleting k3d cluster ${cluster_name}"
+k3d cluster delete "${cluster_name}"
+'''
+
+[tasks."k3d:cluster-stop"]
+description = "Stop the local k3d cluster without deleting it"
+run = '''
+cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
+k3d cluster stop "${cluster_name}"
+'''
+
+[tasks."k3d:cluster-start"]
+description = "Start the existing local k3d cluster"
+run = '''
+set -eu
+cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
+k3d cluster start "${cluster_name}"
+kubectl config use-context "k3d-${cluster_name}"
+'''
+
+[tasks."k3d:load"]
+description = "Import the configured application images into k3d"
+run = '''
+set -eu
+set -a; . infra/compose/.env; set +a
+cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
+auth_image="${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
+client_image="${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
+resource_image="${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
+k3d image import "${auth_image}" "${client_image}" "${resource_image}" -c "${cluster_name}"
+'''
+
+[tasks."k3d:render"]
+description = "Render the local Kubernetes overlay to stdout"
+run = "kustomize build --load-restrictor LoadRestrictionsNone infra/k8s/overlays/local"
+
+[tasks."k3d:deploy"]
+description = "Apply local Kubernetes manifests and wait for rollouts"
+run = '''
+set -eu
+set -a; . infra/compose/.env; set +a
+namespace="${K8S_NAMESPACE:-dcrivella-auth}"
+auth_image="${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
+client_image="${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
+resource_image="${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
+kustomize build --load-restrictor LoadRestrictionsNone infra/k8s/overlays/local | kubectl apply -f -
+kubectl -n "${namespace}" set image deployment/auth-server auth-server="${auth_image}"
+kubectl -n "${namespace}" set image deployment/client-server client-server="${client_image}"
+kubectl -n "${namespace}" set image deployment/resource-server resource-server="${resource_image}"
+kubectl -n "${namespace}" rollout status statefulset/db --timeout=180s
+kubectl -n "${namespace}" rollout status deployment/auth-server --timeout=180s
+kubectl -n "${namespace}" rollout status deployment/resource-server --timeout=180s
+kubectl -n "${namespace}" rollout status deployment/client-server --timeout=180s
+echo "==> k3d stack is up. Open http://localhost:8080"
+'''
+
+[tasks."k3d:logs"]
+description = "Follow logs from all local Kubernetes workloads"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f --all-containers=true --max-log-requests=20 -l app"
+
+[tasks."k3d:logs:auth"]
+description = "Follow auth-server Kubernetes logs"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f deployment/auth-server"
+
+[tasks."k3d:logs:client"]
+description = "Follow client-server Kubernetes logs"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f deployment/client-server"
+
+[tasks."k3d:logs:resource"]
+description = "Follow resource-server Kubernetes logs"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f deployment/resource-server"
+
+[tasks."k3d:logs:db"]
+description = "Follow Postgres Kubernetes logs"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f statefulset/db"
+
+[tasks."k3d:ps"]
+description = "Show local Kubernetes workloads and storage"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} get pods,svc,pvc"
+
+[tasks."k3d:db-reset"]
+description = "Delete the k3d Postgres PVC and recreate Postgres"
+run = '''
+set -eu
+namespace="${K8S_NAMESPACE:-dcrivella-auth}"
+echo "!! This deletes the Postgres PVC in k3d. Ctrl+C to abort, or wait 3s..."
+sleep 3
+kubectl -n "${namespace}" delete statefulset db --ignore-not-found
+kubectl -n "${namespace}" delete pvc -l app=db --ignore-not-found
+kustomize build --load-restrictor LoadRestrictionsNone infra/k8s/overlays/local | kubectl apply -f -
+kubectl -n "${namespace}" rollout status statefulset/db --timeout=180s
+'''
+
+[tasks."k3d:check"]
+description = "Print k3d and Kubernetes diagnostics"
+run = '''
+set -eu
+echo "K3D_CLUSTER_NAME       : ${K3D_CLUSTER_NAME:-dcrivella-auth}"
+echo "K8S_NAMESPACE          : ${K8S_NAMESPACE:-dcrivella-auth}"
+echo "K3D config             : infra/k3d/cluster-config.yaml"
+echo "K8s local overlay      : infra/k8s/overlays/local"
+echo "Postgres init SQL      : infra/db/init/001-provision_auth.sql"
+printf "k3d version            : "; k3d --version
+printf "kustomize version      : "; kustomize version
+printf "kubectl client         : "; kubectl version --client=true
+'''

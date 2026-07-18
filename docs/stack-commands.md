@@ -1,188 +1,89 @@
 # Stack Commands
 
-The root `Makefile` is a small wrapper. It delegates to `infra/makefile` so local commands can be run from the repository root.
-
-Use `make` for normal local work. Use this page when you want to see the underlying Gradle or Docker Compose command.
-
-For every supported target, the root `Makefile` runs:
+The repository uses [mise](https://mise.jdx.dev/) as its tool and task runner.
+Run tasks from the repository root:
 
 ```zsh
-make -C infra -f makefile <target>
+mise install
+mise tasks
+mise run <task>
 ```
 
-## Build Commands
+## Gradle Commands
 
-`make build` runs:
+- `mise run build` runs `./gradlew build`.
+- `mise run test` runs `./gradlew test`.
+- `mise run clean` runs `./gradlew clean`.
+- `mise run format` runs `./gradlew spotlessApply`.
+- `mise run lint` runs `./gradlew spotlessCheck`.
+- `mise run dev:auth`, `dev:client` and `dev:resource` run each module with `bootRun`.
 
-```zsh
-make build-auth
-make build-client
-make build-resource
-```
+The Gradle wrapper remains the source of truth for the Gradle version; mise
+manages the Java 25, k3d, standalone Kustomize and kubectl toolchain but does
+not install Gradle separately.
 
-`make build-auth` runs:
+## Container Images
 
-```zsh
-cd ..
-./gradlew :auth-server:clean :auth-server:bootBuildImage \
-  -PBP_NATIVE_IMAGE=true \
-  -Pspring-boot.build-image.imageName=$AUTH_SERVER_IMAGE \
-  -Pversion=$AUTH_SERVER_IMAGE_TAG
-```
+`mise run image:build` builds all three native images sequentially. Individual
+images can be built with:
 
-`make build-client` runs:
+- `mise run image:build:auth`
+- `mise run image:build:client`
+- `mise run image:build:resource`
 
-```zsh
-cd ..
-./gradlew :client-server:clean :client-server:bootBuildImage \
-  -PBP_NATIVE_IMAGE=true \
-  -Pspring-boot.build-image.imageName=$CLIENT_SERVER_IMAGE \
-  -Pversion=$CLIENT_SERVER_IMAGE_TAG
-```
+Each task loads image tags from `infra/compose/.env` and invokes the module's
+`bootBuildImage` task with `-PBP_NATIVE_IMAGE=true`, the resolved image name and
+`-Pversion=<module image tag>`.
 
-`make build-resource` runs:
+## Docker Compose
 
-```zsh
-cd ..
-./gradlew :resource-server:clean :resource-server:bootBuildImage \
-  -PBP_NATIVE_IMAGE=true \
-  -Pspring-boot.build-image.imageName=$RESOURCE_SERVER_IMAGE \
-  -Pversion=$RESOURCE_SERVER_IMAGE_TAG
-```
+- `mise run compose:build-up` builds all images and starts the stack.
+- `mise run compose:up` starts the stack with existing images.
+- `mise run compose:down` stops the stack while preserving named volumes.
+- `mise run compose:restart` stops and starts the stack.
+- `mise run compose:logs` follows all logs.
+- `mise run compose:logs:auth` follows the auth-server service.
+- `mise run compose:logs:client` follows the client-server service.
+- `mise run compose:logs:resource` follows the resource-server service.
+- `mise run compose:logs:db` follows the Postgres service.
+- `mise run compose:ps` shows service status.
+- `mise run compose:check` prints image, Compose, wrapper and module diagnostics.
+- `mise run compose:db-reset` deletes named volumes and starts a fresh stack.
 
-## Docker Compose Commands
+The reset task waits three seconds after warning that it will delete the local
+Postgres volume. Use `compose:down` when the database must be preserved.
 
-The Compose commands are defined in `infra/makefile` and run Docker Compose with files from `infra/compose`.
+All Compose tasks use both `infra/compose/compose.yml` and
+`infra/compose/compose.override.yml`, with `infra/compose/.env`.
 
-`make compose-build-up` runs:
+## k3d / Kubernetes
 
-```zsh
-make build
-make compose-up
-```
+- `mise run k3d:build-up` builds images and runs the full k3d deployment.
+- `mise run k3d:up` creates or selects the cluster, loads existing images and deploys.
+- `mise run k3d:cluster-up` creates the cluster when it does not exist.
+- `mise run k3d:cluster-start` starts the existing cluster.
+- `mise run k3d:cluster-stop` stops the cluster without deleting it.
+- `mise run k3d:cluster-down` deletes the cluster.
+- `mise run k3d:load` imports the configured application images.
+- `mise run k3d:render` renders the local Kustomize overlay to stdout.
+- `mise run k3d:deploy` pipes the standalone Kustomize render into kubectl and waits for rollouts.
+- `mise run k3d:logs` follows all workload logs.
+- `mise run k3d:logs:auth` follows the auth-server workload.
+- `mise run k3d:logs:client` follows the client-server workload.
+- `mise run k3d:logs:resource` follows the resource-server workload.
+- `mise run k3d:logs:db` follows the Postgres workload.
+- `mise run k3d:ps` shows pods, services and PVCs.
+- `mise run k3d:check` prints tool and path diagnostics.
+- `mise run k3d:db-reset` deletes the Postgres PVC and recreates Postgres.
 
-`make compose-up` runs:
+The local overlay reads `infra/db/init/001-provision_auth.sql` directly when it
+generates the `postgres-init` ConfigMap. Standalone Kustomize is invoked with
+`LoadRestrictionsNone` so this trusted repository-local file can be shared
+without maintaining an overlay copy. The reset task warns and waits three
+seconds before deleting Kubernetes data.
 
-```zsh
-docker compose up -d --remove-orphans
-```
-
-`make compose-up` does not build images. Use it for later runs when the images already exist locally. For a fresh checkout or after code changes, run `make compose-build-up`.
-
-`make compose-down` runs:
-
-```zsh
-docker compose down
-```
-
-`make compose-restart` runs:
-
-```zsh
-make compose-down
-make compose-up
-```
-
-`make compose-logs` follows logs for the whole Compose stack and runs:
-
-```zsh
-docker compose logs -f
-```
-
-`make compose-logs-auth` runs:
-
-```zsh
-docker compose logs -f auth-server
-```
-
-`make compose-logs-client` runs:
-
-```zsh
-docker compose logs -f client-server
-```
-
-`make compose-logs-resource` runs:
-
-```zsh
-docker compose logs -f resource-server
-```
-
-`make compose-logs-db` runs:
-
-```zsh
-docker compose logs -f db
-```
-
-`make compose-ps` runs:
-
-```zsh
-docker compose ps
-```
-
-`make compose-db-reset` runs:
-
-```zsh
-docker compose down -v
-docker compose up -d --remove-orphans
-```
-
-This deletes the local Postgres volume.
-
-The shorter legacy targets `make up`, `make down`, `make logs`, `make ps`, `make db-reset` and `make check` still map to the Compose workflow.
-
-## Diagnostics
-
-`make check` prints the resolved image names, Docker Compose version, root Gradle wrapper status and module directory checks.
-
-## k3d / Kubernetes Commands
-
-The k3d commands also run through the root `Makefile`, but create a local Kubernetes cluster instead of using Docker Compose. They require `k3d` and `kubectl` with Kustomize support for `kubectl apply -k`.
-
-`make k3d-build-up` runs:
-
-```zsh
-make build
-make k3d-up
-```
-
-`make k3d-up` runs:
-
-```zsh
-make k3d-cluster-up
-make k3d-load
-make k3d-deploy
-```
-
-`make k3d-cluster-up` creates the k3d cluster from:
-
-```zsh
-infra/k3d/cluster-config.yaml
-```
-
-It does not deploy application manifests by itself. Application deployment happens in `make k3d-deploy`.
-
-`make k3d-load` imports the locally built application images into the k3d cluster:
-
-```zsh
-k3d image import $AUTH_SERVER_IMAGE $CLIENT_SERVER_IMAGE $RESOURCE_SERVER_IMAGE -c dcrivella-auth
-```
-
-`make k3d-deploy` applies the local Kustomize overlay:
-
-```zsh
-kubectl apply -k infra/k8s/overlays/local
-```
-
-Before applying the overlay, the Make target copies `infra/db/init/001-provision_auth.sql` into the overlay so Kustomize can generate the `postgres-init` ConfigMap without maintaining a second SQL source. After applying the overlay, the target sets the Deployment image tags from `infra/compose/.env`.
-
-`make k3d-cluster-stop` stops the existing k3d cluster without deleting Kubernetes objects or PVCs.
-
-`make k3d-cluster-start` starts the existing k3d cluster and switches kubectl to its context.
-
-`make k3d-cluster-down` deletes the k3d cluster.
-
-`make k3d-db-reset` deletes the k3d Postgres PVC and recreates Postgres. This wipes the k3d database.
-
-The k3d stack uses `http://host.k3d.internal:9000` as the issuer URL so pods can resolve the Authorization Server through k3d's cluster DNS. Add this host mapping for browser redirects:
+The k3d stack uses `http://host.k3d.internal:9000` as its issuer. On Linux, add
+the host alias when required for browser redirects:
 
 ```zsh
 echo "127.0.0.1 host.k3d.internal" | sudo tee -a /etc/hosts

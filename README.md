@@ -14,7 +14,7 @@ This repository is a single **Gradle multi-project build** with one root wrapper
 
 ```text
 dcrivella-auth/
-├─ Makefile                        # root entrypoint; delegates local runtime commands to infra/makefile
+├─ .mise.toml                      # tool versions and local development tasks
 ├─ auth-server/                    # Spring Authorization Server module; issues OAuth2/OIDC tokens
 ├─ client-server/                  # OAuth2/OIDC web client module; login UI and resource-server calls
 ├─ resource-server/                # JWT-protected API module; validates issuer, audience and scopes
@@ -32,7 +32,6 @@ dcrivella-auth/
 │  ├─ k8s/                         # Kubernetes manifests
 │  │  └─ overlays/                 # Kustomize environment overlays
 │  │     └─ local/                 # local k3d overlay, one resource/service per YAML file
-│  └─ makefile                     # implementation of build, Compose and k3d helper targets
 ```
 
 ## Prerequisites
@@ -42,46 +41,22 @@ dcrivella-auth/
 
 - Linux: install Docker Engine + Compose plugin
 
-### Optional: k3d Kubernetes runtime
-Install these only if you want to run the stack in a local Kubernetes cluster instead of Docker Compose:
+### mise
 
-- `k3d`
-- `kubectl` with Kustomize support for `kubectl apply -k`
-
-The k3d option uses the same application images built by Gradle, then imports them into the local k3d cluster.
-
-### JDK with SDKMAN for local development
-We recommend [SDKMAN!](https://sdkman.io) to manage multiple JDK versions.
-
-Install Temurin JDK 25:
+Install [mise](https://mise.jdx.dev/), then install the project toolchain:
 
 ```zsh
-sdk install java 25.0.3-tem
-sdk default java 25.0.3-tem
+mise install
+mise tasks
 ```
 
-Check:
-```zsh
-java --version
+The project configuration tracks the current Temurin Java 25 patch and pins the
+k3d, standalone Kustomize and kubectl versions used by the local Kubernetes
+workflow. Gradle is not installed by mise because the repository uses its root
+wrapper (`./gradlew`).
 
-openjdk 25.0.3 2026-04-21 LTS
-OpenJDK Runtime Environment Temurin-25.0.3+9 (build 25.0.3+9-LTS)
-OpenJDK 64-Bit Server VM Temurin-25.0.3+9 (build 25.0.3+9-LTS, mixed mode, sharing)
-```
-
-### Make
-The **Makefile** in this project is just a convenience layer on top of Docker and Gradle commands.  
-If you don't want to install `make`, you can always run the equivalent `docker compose` and `./gradlew` commands manually.
-
-- macOS (Homebrew):
-```zsh
-brew install make
-```
-
-- Linux (Debian/Ubuntu):
-```zsh
-sudo apt install -y make
-```
+Docker Engine and Docker Compose v2 remain system prerequisites. k3d and
+Kustomize and kubectl are only needed when using the optional Kubernetes runtime.
 
 ## Local Host Aliases
 
@@ -118,14 +93,14 @@ ISSUER_URL=http://host.docker.internal:9000
 
 Start the stack from the repository root:
 ```zsh
-make compose-build-up
+mise run compose:build-up
 ```
 
-- make compose-build-up → builds the images and then starts the Compose stack. Use this on a fresh checkout or after code changes.
+- `mise run compose:build-up` → builds the images and then starts the Compose stack. Use this on a fresh checkout or after code changes.
 
-- make build → only builds the images.
+- `mise run image:build` → only builds the images.
 
-- make compose-up → only starts the Compose stack. Use this for later runs when the images already exist locally.
+- `mise run compose:up` → only starts the Compose stack. Use this for later runs when the images already exist locally.
 
 ➡️ Open the client application in your browser:
 
@@ -153,13 +128,14 @@ http://host.k3d.internal:9000
 Start the k3d stack from the repository root:
 
 ```zsh
-make k3d-build-up
+mise run k3d:build-up
 ```
 
-- `make k3d-build-up` → builds the images, creates the cluster if needed, imports images into k3d and deploys Kubernetes manifests.
-- `make k3d-up` → creates the cluster if needed, imports already-built images and deploys manifests.
-- `make k3d-cluster-stop` / `make k3d-cluster-start` → stop/start the existing cluster without deleting Kubernetes resources.
-- `make k3d-cluster-down` → deletes the k3d cluster.
+- `mise run k3d:build-up` → builds the images, creates the cluster if needed, imports images into k3d and deploys Kubernetes manifests.
+- `mise run k3d:up` → creates the cluster if needed, imports already-built images and deploys manifests.
+- `mise run k3d:render` → renders the local Kustomize overlay to stdout without applying it.
+- `mise run k3d:cluster-stop` / `mise run k3d:cluster-start` → stop/start the existing cluster without deleting Kubernetes resources.
+- `mise run k3d:cluster-down` → deletes the k3d cluster.
 
 Open the client application in your browser:
 
@@ -219,7 +195,7 @@ Shortcut (compile + run in one step):
 
 ### Docker Build
 This project uses Spring Boot's `bootBuildImage` task to produce OCI images with Cloud Native Buildpacks. The modules currently configure Paketo builder images. <br>
-For a short explanation of Spring Boot build images, Paketo Buildpacks and Kaniko, see [Container Images](docs/container-images.md).
+For a short explanation of Spring Boot build images, Paketo Buildpacks and Dockerfile alternatives, see [Container Images](docs/container-images.md).
 
 By default, the Gradle task is configured to build native images, but you can choose to use JVM with a property.
 
@@ -244,70 +220,63 @@ docker run --rm -p 9000:9000 \
 The project uses a root Gradle multi-project build with one wrapper (`./gradlew`). <br>
 Use module-qualified task names, for example `:auth-server:bootRun`, `:client-server:test` or `:resource-server:bootBuildImage`.
 
-Install Gradle locally:
+Check the wrapper version:
 ```zsh
-sdk install gradle 9.5.1
-sdk default gradle 9.5.1
-gradle -v
-```
-
-Update the root wrapper:
-```zsh
-gradle wrapper --gradle-version 9.5.1
 ./gradlew -v
 ```
 
-## Make Commands
+## mise Tasks
 
-The recommended local workflow uses `make` from the repository root. The root `Makefile` delegates to `infra/makefile`, which runs Gradle image builds plus Compose and k3d lifecycle commands. See [Stack Commands](docs/stack-commands.md) for the exact command mappings.
+The recommended local workflow uses `mise run <task>` from the repository root. Run `mise tasks` for the complete list. See [Stack Commands](docs/stack-commands.md) for the underlying Gradle, Compose and Kubernetes commands.
+
+Format source and configuration files, or verify formatting without changing files:
+
+```zsh
+mise run format
+mise run lint
+```
+
+The equivalent Gradle tasks are `./gradlew spotlessApply` and `./gradlew spotlessCheck`. Each module's `check` task also runs the Spotless check.
 
 ### Build Images
 
 Use these commands to generate the Docker/OCI images used by both Compose and k3d.
 
-- **make build-auth** → builds the `auth-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
-- **make build-client** → builds the `client-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
-- **make build-resource** → builds the `resource-server` Docker image using Gradle’s `bootBuildImage` (via **Paketo Buildpacks**).
+- **mise run image:build:auth** → builds the `auth-server` image using Gradle’s `bootBuildImage` and Paketo Buildpacks.
+- **mise run image:build:client** → builds the `client-server` image.
+- **mise run image:build:resource** → builds the `resource-server` image.
+- **mise run image:build** → builds all three images sequentially.
 
 ### Compose Stack
 
 Use these commands to run the local stack with Docker Compose.
 
-- **make compose-build-up** → builds images and starts the Compose stack.
-- **make compose-up** → starts the Compose stack with already-built images.
-- **make compose-down** → stops/removes the Compose stack but preserves named volumes, including the Postgres DB volume.
-- **make compose-restart** → stops and then restarts the Compose stack.
-- **make compose-logs** → tails logs for the whole Compose stack.
-- **make compose-logs-auth** → tails Compose logs for `auth-server`.
-- **make compose-logs-client** → tails Compose logs for `client-server`.
-- **make compose-logs-resource** → tails Compose logs for `resource-server`.
-- **make compose-logs-db** → tails Compose logs for `db`.
-- **make compose-ps** → shows Compose container status.
-- **make compose-db-reset** → stops Compose, deletes Postgres volumes and restarts with a fresh database. <br> ⚠️ This wipes all local Compose data; use `make compose-down` if you want to keep the DB.
-- **make compose-check** → prints Compose diagnostic info.
+- **mise run compose:build-up** → builds images and starts the Compose stack.
+- **mise run compose:up** / **compose:down** / **compose:restart** → control the stack lifecycle.
+- **mise run compose:logs** → tails all logs; use `compose:logs:auth`, `:client`, `:resource` or `:db` for one service.
+- **mise run compose:ps** → shows Compose container status.
+- **mise run compose:db-reset** → deletes Postgres volumes and starts a fresh stack. <br> ⚠️ This wipes all local Compose data; use `compose:down` to preserve it.
+- **mise run compose:check** → prints Compose diagnostics.
 
 ### k3d Cluster
 
 Use these commands to run the local stack in a k3d Kubernetes cluster.
 
-- **make k3d-build-up** → builds images, creates/starts the k3d cluster, imports images and deploys Kubernetes manifests.
-- **make k3d-up** → creates/starts the k3d cluster, imports already-built images and deploys Kubernetes manifests.
-- **make k3d-cluster-stop** → stops the k3d cluster without deleting Kubernetes resources.
-- **make k3d-cluster-start** → starts an existing k3d cluster.
-- **make k3d-cluster-down** → deletes the k3d cluster.
-- **make k3d-ps** → shows Kubernetes pods, services and PVCs.
-- **make k3d-logs** → tails logs for all k3d stack pods.
-- **make k3d-logs-auth** → tails k3d logs for `auth-server`.
-- **make k3d-logs-client** → tails k3d logs for `client-server`.
-- **make k3d-logs-resource** → tails k3d logs for `resource-server`.
-- **make k3d-logs-db** → tails k3d logs for Postgres.
-- **make k3d-db-reset** → deletes the k3d Postgres PVC and recreates Postgres. <br> ⚠️ This wipes the k3d database.
+- **mise run k3d:build-up** → builds images, creates/starts the cluster, imports images and deploys Kubernetes manifests.
+- **mise run k3d:up** → deploys using already-built images.
+- **mise run k3d:render** → renders the local overlay with standalone Kustomize without applying it.
+- **mise run k3d:cluster-stop** / **cluster-start** / **cluster-down** → control the cluster lifecycle.
+- **mise run k3d:ps** → shows Kubernetes pods, services and PVCs.
+- **mise run k3d:logs** → tails all workload logs; use `k3d:logs:auth`, `:client`, `:resource` or `:db` for one workload.
+- **mise run k3d:db-reset** → deletes the Postgres PVC and recreates Postgres. <br> ⚠️ This wipes the k3d database.
 
 ## Project Notes
 
-- [OAuth2 and OIDC Overview](docs/oauth2-oidc-overview.md) explains the roles of `auth-server`, `client-server` and `resource-server`.
-- [Container Images](docs/container-images.md) explains Spring Boot build images, Paketo Buildpacks and Kaniko.
-- [Stack Commands](docs/stack-commands.md) maps `make` commands to the underlying Gradle and Docker Compose commands.
+- [OAuth2 and OIDC Overview](docs/oauth2-oidc-overview.md) documents the OAuth2/OIDC behavior implemented by `auth-server`, `client-server` and `resource-server`.
+- [Identity Providers and Multitenancy](docs/identity-providers-and-multitenancy.md) compares conceptual, not-yet-implemented Zitadel strategies for centralized identity, roles, tenant access metadata, enriched claims and cached domain resolution.
+- [Browser Clients and Token Lifecycle](docs/browser-clients-and-token-lifecycle.md) covers refresh tokens, SPA/BFF tradeoffs, browser cookies, sessions, rotation, expiration and invalidation.
+- [Container Images](docs/container-images.md) explains the repository's Paketo Buildpack flow and the historical Kaniko/current BuildKit comparison for Dockerfile builds.
+- [Stack Commands](docs/stack-commands.md) maps every mise task to its Gradle, Docker Compose or Kubernetes behavior.
 
 ## Database Connection Details
 

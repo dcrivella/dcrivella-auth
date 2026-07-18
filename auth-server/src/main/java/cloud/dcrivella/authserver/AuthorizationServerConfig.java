@@ -9,9 +9,7 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 public class AuthorizationServerConfig {
 
     @Bean
-    protected AuthorizationServerSettings authorizationServerSettings(
-            @Value("${ISSUER_URL:}") String issuer
-    ) {
+    protected AuthorizationServerSettings authorizationServerSettings(@Value("${ISSUER_URL:}") String issuer) {
         AuthorizationServerSettings.Builder builder = AuthorizationServerSettings.builder();
         if (issuer != null && !issuer.isBlank()) {
             builder.issuer(issuer);

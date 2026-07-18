@@ -1,7 +1,7 @@
-import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.java
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
     java
@@ -45,7 +45,7 @@ tasks.processResources {
     filesMatching(listOf("application.yml", "application.yaml", "application-*.yml", "application-*.yaml")) {
         filter(
             mapOf("tokens" to mapOf("projectVersion" to project.version.toString())),
-            ReplaceTokens::class.java
+            ReplaceTokens::class.java,
         )
     }
 }
@@ -67,8 +67,8 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     environment.set(
         mapOf(
             "BP_JVM_VERSION" to "25",
-            "BP_NATIVE_IMAGE" to native.toString()
-        )
+            "BP_NATIVE_IMAGE" to native.toString(),
+        ),
     )
 
     val image = project.findProperty("spring-boot.build-image.imageName") as String?

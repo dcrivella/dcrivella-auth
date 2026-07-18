@@ -16,7 +16,7 @@ public class TaskRestController {
     public String getTasks(@AuthenticationPrincipal Jwt jwt) {
         return """
                   <h1>Tasks for %s:</h1>
-                
+
                   <ol>
                     <li>Task 1</li>
                     <li>Task 2</li>

@@ -14,8 +14,7 @@ public class WebClientsConfig {
     }
 
     @Bean
-    protected WebClient resourceServerApi(WebClient.Builder builder,
-            @Value("${api.resource-server.url}") String baseUrl) {
+    protected WebClient resourceServerApi(WebClient.Builder builder, @Value("${api.resource-server.url}") String baseUrl) {
         return builder.clone().baseUrl(baseUrl).build();
     }
 }

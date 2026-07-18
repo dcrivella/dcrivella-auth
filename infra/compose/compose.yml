@@ -12,7 +12,7 @@ services:
       - db-data:/var/lib/postgresql
       - ../db/init:/docker-entrypoint-initdb.d
     networks:
-      - server-side      
+      - server-side
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -44,7 +44,7 @@ services:
       ISSUER_URL: ${ISSUER_URL}
       RESOURCE_SERVER_API_URL: http://resource-server:${RESOURCE_SERVER_INTERNAL_PORT}
     extra_hosts:
-      - "host.docker.internal:host-gateway"      
+      - "host.docker.internal:host-gateway"
     networks:
       - client-side
 
@@ -59,9 +59,9 @@ services:
       ISSUER_URL: ${ISSUER_URL}
       RESOURCE_AUDIENCE: ${RESOURCE_AUDIENCE}
     extra_hosts:
-      - "host.docker.internal:host-gateway"      
+      - "host.docker.internal:host-gateway"
     networks:
-      - client-side         
+      - client-side
 
 volumes:
   db-data:
@@ -69,4 +69,4 @@ volumes:
 networks:
   client-side: {}
   server-side:
-    internal: true              
+    internal: true

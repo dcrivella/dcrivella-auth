@@ -5,8 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 
 /**
- * Binds audience enforcement settings from
- * {@code spring.security.oauth2.resourceserver.jwt.audience}.
+ * Binds audience enforcement settings from {@code spring.security.oauth2.resourceserver.jwt.audience}.
  * <p>
  * This project standardizes on a single audience per resource server.
  */

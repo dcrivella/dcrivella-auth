@@ -27,8 +27,8 @@ public class HomeController {
     }
 
     @GetMapping("/home")
-    public String home(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient client,
-            @AuthenticationPrincipal OidcUser oidcUser, org.springframework.ui.Model model) {
+    public String home(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient client, @AuthenticationPrincipal OidcUser oidcUser,
+            org.springframework.ui.Model model) {
         OAuth2AccessToken at = client != null ? client.getAccessToken() : null;
         OAuth2RefreshToken rt = client != null ? client.getRefreshToken() : null;
 

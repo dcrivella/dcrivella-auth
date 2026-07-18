@@ -25,4 +25,4 @@ generatorOptions:
 configMapGenerator:
   - name: postgres-init
     files:
-      - 001-provision_auth.sql
+      - ../../../db/init/001-provision_auth.sql

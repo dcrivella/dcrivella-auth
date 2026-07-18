@@ -17,22 +17,19 @@ import java.util.stream.Collectors;
 /**
  * Registers token customization for access tokens.
  * <p>
- * Reads {@link TokenAudienceProperties} (prefix {@code auth.token})
- * and, when a mapping exists for the current {@code clientId}, sets the JWT {@code aud}
- * claim to the configured list of audience values.
+ * Reads {@link TokenAudienceProperties} (prefix {@code auth.token}) and, when a mapping exists for the current {@code clientId}, sets the
+ * JWT {@code aud} claim to the configured list of audience values.
  * <p>
- * Access tokens are meant for resource servers, so OIDC login scopes such as
- * {@code openid} and {@code profile} are removed from the access token {@code scope}
- * claim. Those scopes remain part of the authorization request and ID token flow.
- * No change is made for ID tokens.
+ * Access tokens are meant for resource servers, so OIDC login scopes such as {@code openid} and {@code profile} are removed from the access
+ * token {@code scope} claim. Those scopes remain part of the authorization request and ID token flow. No change is made for ID tokens.
  */
 @Configuration
 @EnableConfigurationProperties(TokenAudienceProperties.class)
 public class AuthTokenCustomizerConfig {
 
     /**
-     * Customizes access token claims to include the configured {@code aud} claim
-     * and expose only API scopes in the access token {@code scope} claim.
+     * Customizes access token claims to include the configured {@code aud} claim and expose only API scopes in the access token
+     * {@code scope} claim.
      */
     @Bean
     protected OAuth2TokenCustomizer<JwtEncodingContext> audienceTokenCustomizer(TokenAudienceProperties props) {
@@ -49,10 +46,8 @@ public class AuthTokenCustomizerConfig {
                 context.getClaims().claim("aud", clientAud);
             }
 
-            Set<String> apiScopes = context.getAuthorizedScopes().stream()
-                    .filter(scope -> !OidcScopes.OPENID.equals(scope))
-                    .filter(scope -> !OidcScopes.PROFILE.equals(scope))
-                    .collect(Collectors.toCollection(java.util.TreeSet::new));
+            Set<String> apiScopes = context.getAuthorizedScopes().stream().filter(scope -> !OidcScopes.OPENID.equals(scope))
+                    .filter(scope -> !OidcScopes.PROFILE.equals(scope)).collect(Collectors.toCollection(java.util.TreeSet::new));
 
             context.getClaims().claims(claims -> {
                 if (apiScopes.isEmpty()) {

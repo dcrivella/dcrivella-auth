@@ -22,12 +22,12 @@ import java.util.Objects;
  * <p>
  * Responsibilities:
  * <ul>
- *   <li>Enables method security so annotations like {@code @PreAuthorize} are enforced.</li>
- *   <li>Secures all endpoints (except a small allowlist) using JWT Bearer tokens.</li>
- *   <li>Configures a {@code JwtDecoder} that validates the token issuer and, if configured,
- *       enforces that the token's {@code aud} claim contains at least one expected audience.</li>
- *   <li>Maps {@code scope}/{@code scp} claims to Spring authorities using the {@code SCOPE_} prefix,
- *       and sets the JWT {@code sub} as the authentication principal.</li>
+ * <li>Enables method security so annotations like {@code @PreAuthorize} are enforced.</li>
+ * <li>Secures all endpoints (except a small allowlist) using JWT Bearer tokens.</li>
+ * <li>Configures a {@code JwtDecoder} that validates the token issuer and, if configured, enforces that the token's {@code aud} claim
+ * contains at least one expected audience.</li>
+ * <li>Maps {@code scope}/{@code scp} claims to Spring authorities using the {@code SCOPE_} prefix, and sets the JWT {@code sub} as the
+ * authentication principal.</li>
  * </ul>
  */
 @Configuration
@@ -36,8 +36,8 @@ import java.util.Objects;
 public class SecurityConfig {
 
     /**
-     * Configures HTTP security to require authentication for all requests except
-     * a small allowlist and to use JWT Bearer token authentication.
+     * Configures HTTP security to require authentication for all requests except a small allowlist and to use JWT Bearer token
+     * authentication.
      */
     @Bean
     protected SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> jwtDecoderProvider) {
@@ -48,16 +48,14 @@ public class SecurityConfig {
 
         // Only configure JWT resource server when a JwtDecoder is available (e.g., issuer configured).
         if (jwtDecoderProvider.getIfAvailable() != null) {
-            http.oauth2ResourceServer(oauth -> oauth
-                    .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+            http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         }
         return http.build();
     }
 
     /**
-     * Creates a {@link JwtDecoder} that validates the issuer and, optionally, the audience.
-     * Audience value is read from the property {@code spring.security.oauth2.resourceserver.jwt.audience}.
-     * If not set, audience validation is skipped.
+     * Creates a {@link JwtDecoder} that validates the issuer and, optionally, the audience. Audience value is read from the property
+     * {@code spring.security.oauth2.resourceserver.jwt.audience}. If not set, audience validation is skipped.
      */
     @Bean
     @ConditionalOnProperty(prefix = "spring.security.oauth2.resourceserver.jwt", name = "issuer-uri")
@@ -72,8 +70,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Converts JWT {@code scope}/{@code scp} claims into authorities prefixed with {@code SCOPE_}
-     * and uses the {@code sub} claim as the principal.
+     * Converts JWT {@code scope}/{@code scp} claims into authorities prefixed with {@code SCOPE_} and uses the {@code sub} claim as the
+     * principal.
      */
     private static JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter scopes = new JwtGrantedAuthoritiesConverter();
