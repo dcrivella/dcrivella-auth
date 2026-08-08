@@ -5,7 +5,7 @@
 java = "temurin-25"
 k3d = "5.9.0"
 kustomize = "5.8.1"
-kubectl = "1.36.2"
+kubectl = "1.36.3"
 
 # Gradle lifecycle
 
@@ -40,6 +40,10 @@ run = "./gradlew :client-server:bootRun"
 [tasks."dev:resource"]
 description = "Run the resource server locally"
 run = "./gradlew :resource-server:bootRun"
+
+[tasks.nuke]
+description = "Remove both local runtimes and their data without recreating them"
+run = "scripts/nuke.sh all"
 
 # Container images
 
@@ -92,6 +96,14 @@ echo "==> Building resource-server image ${image_name}"
 '''
 
 # Docker Compose
+
+[tasks."compose:nuke"]
+description = "Remove the fixed Compose stack and its data without recreating it"
+run = "scripts/nuke.sh compose"
+
+[tasks."compose:bootstrap:fresh"]
+description = "Rebuild images and recreate the fixed Compose stack with fresh data"
+run = "scripts/compose-bootstrap-fresh.sh"
 
 [tasks."compose:build-up"]
 description = "Build all images and start the Compose stack"
@@ -170,6 +182,14 @@ echo "Resource module exists?: $( [ -d resource-server ] && echo yes || echo NO 
 '''
 
 # k3d / Kubernetes
+
+[tasks."k3d:nuke"]
+description = "Remove the fixed k3d cluster and its data without recreating it"
+run = "scripts/nuke.sh k3d"
+
+[tasks."k3d:bootstrap:fresh"]
+description = "Rebuild images and recreate the fixed k3d cluster with fresh data"
+run = "scripts/k3d-bootstrap-fresh.sh"
 
 [tasks."k3d:build-up"]
 description = "Build images, create or start the k3d cluster, and deploy"

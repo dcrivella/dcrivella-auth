@@ -98,9 +98,18 @@ mise run compose:build-up
 
 - `mise run compose:build-up` → builds the images and then starts the Compose stack. Use this on a fresh checkout or after code changes.
 
+- `mise run compose:bootstrap:fresh` → rebuilds all images, then permanently deletes and recreates the fixed `dcrivella-auth-stack` Compose project, including its containers, networks and `db-data` volume. It refuses to run while the `dcrivella-auth` k3d cluster is active and requires `[y/N]` confirmation.
+
+- `mise run compose:nuke` → permanently deletes that fixed Compose project and its declared volumes without rebuilding or recreating it. Local images and build caches are preserved, and `[y/N]` confirmation is required.
+
 - `mise run image:build` → only builds the images.
 
 - `mise run compose:up` → only starts the Compose stack. Use this for later runs when the images already exist locally.
+
+- `mise run compose:down` → removes the Compose containers and networks while preserving `db-data`.
+- `mise run compose:db-reset` → performs a quick database-only reset using existing images.
+- `mise run compose:bootstrap:fresh` → deletes and recreates the complete Compose environment.
+- `mise run compose:nuke` → deletes the Compose environment without recreating it or starting any services.
 
 ➡️ Open the client application in your browser:
 
@@ -132,10 +141,17 @@ mise run k3d:build-up
 ```
 
 - `mise run k3d:build-up` → builds the images, creates the cluster if needed, imports images into k3d and deploys Kubernetes manifests.
+- `mise run k3d:bootstrap:fresh` → rebuilds all images, then permanently deletes and recreates the fixed `dcrivella-auth` cluster and its data at `$HOME/.k3d-dcrivella-auth/data`. It refuses to run while this project's Compose services are active and requires `[y/N]` confirmation.
 - `mise run k3d:up` → creates the cluster if needed, imports already-built images and deploys manifests.
 - `mise run k3d:render` → renders the local Kustomize overlay to stdout without applying it.
 - `mise run k3d:cluster-stop` / `mise run k3d:cluster-start` → stop/start the existing cluster without deleting Kubernetes resources.
-- `mise run k3d:cluster-down` → deletes the k3d cluster.
+- `mise run k3d:cluster-down` → deletes the k3d cluster but leaves `$HOME/.k3d-dcrivella-auth/data` on the host.
+- `mise run k3d:nuke` → deletes the fixed cluster when it exists and then permanently removes that data directory without rebuilding or recreating the environment. Local images and build caches are preserved, and `[y/N]` confirmation is required.
+
+- `mise run k3d:build-up` → provides the normal, non-destructive rebuild/deploy flow.
+- `mise run k3d:bootstrap:fresh` → erases all k3d persistent data, including orphaned PVC data, then recreates the cluster and database.
+- `mise run k3d:nuke` → erases the cluster and persistent data without recreating the cluster or starting any services.
+- `mise run nuke` → preflights both runtimes, asks for confirmation once, removes Compose before k3d, continues with the other cleanup after a partial failure, reports whether to repeat `mise run compose:nuke` or `mise run k3d:nuke`, and preserves Docker images and build caches.
 
 Open the client application in your browser:
 
@@ -158,17 +174,17 @@ To run normally with JDK 25 (same as pressing Run in IntelliJ):
 For native image compilation, install **GraalVM with Native Image Kit** (NIK):
 
 ```zsh
-sdk install java 25.0.3.r25-nik
-sdk use java 25.0.3.r25-nik
+sdk install java 25.0.4.r25-nik
+sdk use java 25.0.4.r25-nik
 ```
 
 Check:
 ```zsh
 java --version
 
-openjdk 25.0.3 2026-04-21 LTS
-OpenJDK Runtime Environment Liberica-NIK-25.0.3-1 (build 25.0.3+12-LTS)
-OpenJDK 64-Bit Server VM Liberica-NIK-25.0.3-1 (build 25.0.3+12-LTS, mixed mode, sharing)
+openjdk 25.0.4 2026-07-21 LTS
+OpenJDK Runtime Environment Liberica-NIK-25.0.4-1 (build 25.0.4+10-LTS)
+OpenJDK 64-Bit Server VM Liberica-NIK-25.0.4-1 (build 25.0.4+10-LTS, mixed mode, sharing)
 ```
 
 Understanding GraalVM versions:
@@ -252,23 +268,41 @@ Use these commands to generate the Docker/OCI images used by both Compose and k3
 Use these commands to run the local stack with Docker Compose.
 
 - **mise run compose:build-up** → builds images and starts the Compose stack.
+- **mise run compose:bootstrap:fresh** → rebuilds images and, after confirmation, recreates the `dcrivella-auth-stack` project, including containers, networks and the `db-data` volume. <br> ⚠️ This permanently wipes all local Compose data and is blocked while the `dcrivella-auth` k3d cluster is active.
+- **mise run compose:nuke** → after confirmation, removes the fixed project with `down -v --remove-orphans` without recreating its containers or starting any services. Images and build caches are preserved.
 - **mise run compose:up** / **compose:down** / **compose:restart** → control the stack lifecycle.
 - **mise run compose:logs** → tails all logs; use `compose:logs:auth`, `:client`, `:resource` or `:db` for one service.
 - **mise run compose:ps** → shows Compose container status.
 - **mise run compose:db-reset** → deletes Postgres volumes and starts a fresh stack. <br> ⚠️ This wipes all local Compose data; use `compose:down` to preserve it.
 - **mise run compose:check** → prints Compose diagnostics.
 
+- **mise run compose:down** → preserves the database volume.
+- **mise run compose:db-reset** → recreates only the database using existing images.
+- **mise run compose:bootstrap:fresh** → deletes the runtime and data and then recreates them.
+- **mise run compose:nuke** → deletes the runtime and data without recreating them.
+
 ### k3d Cluster
 
 Use these commands to run the local stack in a k3d Kubernetes cluster.
 
 - **mise run k3d:build-up** → builds images, creates/starts the cluster, imports images and deploys Kubernetes manifests.
+- **mise run k3d:bootstrap:fresh** → rebuilds images and, after confirmation, deletes the `dcrivella-auth` cluster plus `$HOME/.k3d-dcrivella-auth/data` before recreating the complete environment. <br> ⚠️ This permanently wipes all local k3d data and is blocked while this project's Compose stack is active.
 - **mise run k3d:up** → deploys using already-built images.
 - **mise run k3d:render** → renders the local overlay with standalone Kustomize without applying it.
 - **mise run k3d:cluster-stop** / **cluster-start** / **cluster-down** → control the cluster lifecycle.
+- **mise run k3d:nuke** → after confirmation, deletes the fixed cluster and `$HOME/.k3d-dcrivella-auth/data` without recreating the cluster or starting any services. Images and build caches are preserved.
 - **mise run k3d:ps** → shows Kubernetes pods, services and PVCs.
 - **mise run k3d:logs** → tails all workload logs; use `k3d:logs:auth`, `:client`, `:resource` or `:db` for one workload.
 - **mise run k3d:db-reset** → deletes the Postgres PVC and recreates Postgres. <br> ⚠️ This wipes the k3d database.
+
+- **mise run k3d:cluster-down** → deletes only the cluster and keeps its host data directory.
+- **mise run k3d:bootstrap:fresh** → deletes runtime and data, recreates both, and refuses to run while Compose is active.
+- **mise run k3d:nuke** → deletes runtime and data without rebuilding, recreating, or starting services.
+
+Use **mise run nuke** to remove both runtimes and both persistent data stores
+with one confirmation. It preflights every selected target before mutation,
+orders Compose before k3d, continues after a partial cleanup failure, and
+preserves Docker images and build caches.
 
 ## Project Notes
 

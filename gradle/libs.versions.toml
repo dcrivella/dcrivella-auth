@@ -1,9 +1,9 @@
 [versions]
 asciidoctor-jvm = "4.0.5"
-graalvm-buildtools-native = "1.1.5"
+graalvm-buildtools-native = "1.1.8"
 spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
-spotless = "8.8.0"
+spotless = "8.9.0"
 
 [plugins]
 asciidoctor-jvm-convert = { id = "org.asciidoctor.jvm.convert", version.ref = "asciidoctor-jvm" }
