@@ -2,8 +2,13 @@ plugins {
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management) apply false
     alias(libs.plugins.graalvm.buildtools) apply false
-    alias(libs.plugins.asciidoctor.jvm.convert) apply false
+    alias(libs.plugins.pitest) apply false
+    alias(libs.plugins.pitestAggregator)
     alias(libs.plugins.spotless)
+}
+
+tasks.named("pitestReportAggregate") {
+    dependsOn(":client-server:pitest", ":resource-server:pitest")
 }
 
 spotless {
@@ -33,7 +38,15 @@ spotless {
             "**/*.yaml",
             "**/*.yml",
         )
-        targetExclude(".gradle/**", ".serena/**", "**/bin/**", "**/build/**")
+        targetExclude(
+            ".gradle/**",
+            ".serena/**",
+            "**/bin/**",
+            "**/build/**",
+            "playwright/node_modules/**",
+            "playwright/playwright-report/**",
+            "playwright/test-results/**",
+        )
         trimTrailingWhitespace()
         endWithNewline()
     }

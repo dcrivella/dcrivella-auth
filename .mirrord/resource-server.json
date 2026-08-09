@@ -1,0 +1,47 @@
+{
+  "kube_context": "k3d-dcrivella-auth",
+  "target": {
+    "path": "deployment/resource-server",
+    "namespace": "dcrivella-auth"
+  },
+  "feature": {
+    "network": {
+      "incoming": {
+        "mode": "steal",
+        "port_mapping": [[18081, 8081]]
+      },
+      "outgoing": {
+        "tcp": true,
+        "udp": true,
+        "ignore_localhost": true
+      },
+      "dns": true
+    },
+    "fs": "local",
+    "env": {
+      "include": [
+        "SPRING_PROFILES_ACTIVE",
+        "ISSUER_URL",
+        "RESOURCE_AUDIENCE",
+        "JWK_SET_URI"
+      ],
+      "override": {
+        "SERVER_PORT": "18081"
+      }
+    }
+  },
+  "skip_processes": [
+    "gradle",
+    "gradlew",
+    "GradleDaemon",
+    "GradleWorkerMain",
+    "KotlinCompileDaemon",
+    "sh",
+    "bash"
+  ],
+  "skip_extra_build_tools": ["gradle", "gradlew"],
+  "agent": {
+    "log_level": "info",
+    "ttl": 60
+  }
+}

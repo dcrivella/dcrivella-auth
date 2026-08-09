@@ -6,6 +6,10 @@ java = "temurin-25"
 k3d = "5.9.0"
 kustomize = "5.8.1"
 kubectl = "1.36.3"
+node = "24.19.0"
+ripgrep = "15.2.0"
+shellcheck = "0.11.0"
+"github:rhysd/actionlint" = "1.7.12"
 
 # Gradle lifecycle
 
@@ -14,8 +18,42 @@ description = "Build and test all Gradle subprojects"
 run = "./gradlew build"
 
 [tasks.test]
-description = "Run all tests"
+description = "Run fast unit, web slice, and architecture tests without Docker"
 run = "./gradlew test"
+
+[tasks."test:integration"]
+description = "Run module integration tests"
+run = "./gradlew integrationTest"
+
+[tasks."test:all"]
+description = "Run unit, web slice, integration, architecture and local runtime automation tests"
+run = '''
+set -eu
+# Keep integration HTTP servers separate from the unit-test AOT workload so issuer discovery remains deterministic.
+./gradlew test
+./gradlew integrationTest :resource-server:archTest
+mise run test:scripts
+'''
+
+[tasks."test:scripts"]
+description = "Test local environment shell scripts with stubbed commands"
+run = '''
+set -eu
+bash scripts/tests/image-mode-test.sh
+bash scripts/tests/playwright-ui-test.sh
+bash scripts/tests/k3d-deploy-test.sh
+bash scripts/tests/compose-bootstrap-fresh-test.sh
+bash scripts/tests/k3d-bootstrap-fresh-test.sh
+bash scripts/tests/nuke-test.sh
+'''
+
+[tasks.coverage]
+description = "Run unit and integration tests and generate JaCoCo HTML/XML reports"
+run = "./gradlew jacocoTestReport"
+
+[tasks."test:mutation"]
+description = "Measure whether focused tests detect behavior changes with PIT"
+run = "./gradlew pitestReportAggregate"
 
 [tasks.clean]
 description = "Clean all Gradle build outputs"
@@ -28,6 +66,140 @@ run = "./gradlew spotlessApply"
 [tasks.lint]
 description = "Check source and configuration formatting with Spotless"
 run = "./gradlew spotlessCheck"
+
+[tasks."lint:actions"]
+description = "Validate all GitHub Actions workflows"
+run = "actionlint"
+
+[tasks."ci:auth"]
+description = "Run the Auth unit and integration CI phases"
+run = '''
+set -eu
+./gradlew :auth-server:test
+./gradlew :auth-server:integrationTest
+'''
+
+[tasks."ci:client"]
+description = "Run the Client unit, integration, and Playwright mock CI phases"
+run = '''
+set -eu
+./gradlew :client-server:test
+./gradlew :client-server:integrationTest
+mise run playwright:install
+CI=true mise run mock:playwright
+'''
+
+[tasks."ci:resource"]
+description = "Run the Resource unit, architecture, and integration CI phases"
+run = '''
+set -eu
+./gradlew :resource-server:test
+./gradlew :resource-server:integrationTest
+'''
+
+[tasks."ci:system"]
+description = "Run preflight, smoke, M2M and browser end-to-end tests against an already-running Compose stack"
+run = '''
+set -eu
+mise run compose:e2e
+CI=true mise run compose:playwright
+'''
+
+[tasks."ci:all"]
+description = "Run every GitHub Actions CI phase against an already-running Compose stack"
+run = '''
+set -eu
+mise run lint:actions
+./gradlew spotlessCheck
+./gradlew :system-tests:systemTestClasses
+./gradlew :auth-server:test :client-server:test :resource-server:test :resource-server:archTest :architecture-tests:test
+./gradlew :auth-server:integrationTest :client-server:integrationTest :resource-server:integrationTest
+mise run playwright:install
+CI=true mise run mock:playwright
+mise run ci:system
+'''
+
+# Browser flows
+
+[tasks."playwright:install"]
+description = "Install the isolated Playwright dependencies and Chromium browser"
+run = '''
+set -eu
+npm --prefix playwright ci
+npm --prefix playwright exec -- playwright install chromium
+'''
+
+[tasks."mock:playwright"]
+description = "Run the real client server against mock OIDC and resource servers"
+run = '''
+set -eu
+./gradlew :client-server:bootJar -Pversion=playwright
+env -u NO_COLOR npm --prefix playwright run test:mock
+'''
+
+[tasks."mock:playwright:ui"]
+description = "Open Playwright UI for the real client server against mock OIDC and resource servers"
+run = '''
+set -eu
+./gradlew :client-server:bootJar -Pversion=playwright
+bash scripts/playwright-ui.sh env -u NO_COLOR npm --prefix playwright run test:mock -- --ui
+'''
+
+[tasks."compose:playwright"]
+description = "Run real browser OAuth tests against an already-running Compose stack"
+run = '''
+set -eu
+env -u NO_COLOR \
+  DCRIVELLA_PLAYWRIGHT_PROFILE=real \
+  DCRIVELLA_PLAYWRIGHT_RUNTIME=compose \
+  DCRIVELLA_PLAYWRIGHT_AUTH_SERVER_URL=http://host.docker.internal:9000 \
+  DCRIVELLA_PLAYWRIGHT_CLIENT_URL=http://localhost:8080 \
+  DCRIVELLA_PLAYWRIGHT_RESOURCE_SERVER_URL=http://localhost:8081 \
+  npm --prefix playwright run test:real
+'''
+
+[tasks."compose:playwright:ui"]
+description = "Open Playwright UI for real browser OAuth tests against an already-running Compose stack"
+run = '''
+set -eu
+bash scripts/playwright-ui.sh env -u NO_COLOR \
+  DCRIVELLA_PLAYWRIGHT_PROFILE=real \
+  DCRIVELLA_PLAYWRIGHT_RUNTIME=compose \
+  DCRIVELLA_PLAYWRIGHT_AUTH_SERVER_URL=http://host.docker.internal:9000 \
+  DCRIVELLA_PLAYWRIGHT_CLIENT_URL=http://localhost:8080 \
+  DCRIVELLA_PLAYWRIGHT_RESOURCE_SERVER_URL=http://localhost:8081 \
+  npm --prefix playwright run test:real -- --ui
+'''
+
+[tasks."k3d:playwright"]
+description = "Run real browser OAuth tests against an already-running k3d stack"
+run = '''
+set -eu
+env -u NO_COLOR \
+  DCRIVELLA_PLAYWRIGHT_PROFILE=real \
+  DCRIVELLA_PLAYWRIGHT_RUNTIME=k3d \
+  DCRIVELLA_PLAYWRIGHT_AUTH_SERVER_URL=http://host.k3d.internal:9000 \
+  DCRIVELLA_PLAYWRIGHT_CLIENT_URL=http://localhost:8080 \
+  DCRIVELLA_PLAYWRIGHT_RESOURCE_SERVER_URL=http://localhost:8081 \
+  npm --prefix playwright run test:real
+'''
+
+[tasks."k3d:playwright:ui"]
+description = "Open Playwright UI for real browser OAuth tests against an already-running k3d stack"
+run = '''
+set -eu
+bash scripts/playwright-ui.sh env -u NO_COLOR \
+  DCRIVELLA_PLAYWRIGHT_PROFILE=real \
+  DCRIVELLA_PLAYWRIGHT_RUNTIME=k3d \
+  DCRIVELLA_PLAYWRIGHT_AUTH_SERVER_URL=http://host.k3d.internal:9000 \
+  DCRIVELLA_PLAYWRIGHT_CLIENT_URL=http://localhost:8080 \
+  DCRIVELLA_PLAYWRIGHT_RESOURCE_SERVER_URL=http://localhost:8081 \
+  npm --prefix playwright run test:real -- --ui
+'''
+
+[tasks."playwright:report"]
+description = "Open the last Playwright HTML report"
+run = "npm --prefix playwright exec -- playwright show-report playwright/playwright-report --host=localhost --port=9323"
 
 [tasks."dev:auth"]
 description = "Run the authorization server locally"
@@ -42,7 +214,7 @@ description = "Run the resource server locally"
 run = "./gradlew :resource-server:bootRun"
 
 [tasks.nuke]
-description = "Remove both local runtimes and their data without recreating them"
+description = "Remove both fixed local runtimes without recreating them"
 run = "scripts/nuke.sh all"
 
 # Container images
@@ -56,16 +228,38 @@ mise run image:build:client
 mise run image:build:resource
 '''
 
+[tasks."image:build:jvm"]
+description = "Build all JVM application images sequentially"
+run = '''
+set -eu
+mise run image:build:auth:jvm
+mise run image:build:client:jvm
+mise run image:build:resource:jvm
+'''
+
 [tasks."image:build:auth"]
 description = "Build the auth-server native image"
 run = '''
 set -eu
-set -a; . infra/compose/.env; set +a
-image_name="${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
-echo "==> Building auth-server image ${image_name}"
+IMAGE_MODE=native
+. scripts/image-mode.sh
+echo "==> Building auth-server ${IMAGE_MODE} image ${AUTH_SERVER_IMAGE}"
 ./gradlew :auth-server:clean :auth-server:bootBuildImage \
-  -PBP_NATIVE_IMAGE=true \
-  -Pspring-boot.build-image.imageName="${image_name}" \
+  -PBP_NATIVE_IMAGE="${BP_NATIVE_IMAGE}" \
+  -Pspring-boot.build-image.imageName="${AUTH_SERVER_IMAGE}" \
+  -Pversion="${AUTH_SERVER_IMAGE_TAG}"
+'''
+
+[tasks."image:build:auth:jvm"]
+description = "Build the auth-server JVM image"
+run = '''
+set -eu
+IMAGE_MODE=jvm
+. scripts/image-mode.sh
+echo "==> Building auth-server ${IMAGE_MODE} image ${AUTH_SERVER_IMAGE}"
+./gradlew :auth-server:clean :auth-server:bootBuildImage \
+  -PBP_NATIVE_IMAGE="${BP_NATIVE_IMAGE}" \
+  -Pspring-boot.build-image.imageName="${AUTH_SERVER_IMAGE}" \
   -Pversion="${AUTH_SERVER_IMAGE_TAG}"
 '''
 
@@ -73,12 +267,25 @@ echo "==> Building auth-server image ${image_name}"
 description = "Build the client-server native image"
 run = '''
 set -eu
-set -a; . infra/compose/.env; set +a
-image_name="${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
-echo "==> Building client-server image ${image_name}"
+IMAGE_MODE=native
+. scripts/image-mode.sh
+echo "==> Building client-server ${IMAGE_MODE} image ${CLIENT_SERVER_IMAGE}"
 ./gradlew :client-server:clean :client-server:bootBuildImage \
-  -PBP_NATIVE_IMAGE=true \
-  -Pspring-boot.build-image.imageName="${image_name}" \
+  -PBP_NATIVE_IMAGE="${BP_NATIVE_IMAGE}" \
+  -Pspring-boot.build-image.imageName="${CLIENT_SERVER_IMAGE}" \
+  -Pversion="${CLIENT_SERVER_IMAGE_TAG}"
+'''
+
+[tasks."image:build:client:jvm"]
+description = "Build the client-server JVM image"
+run = '''
+set -eu
+IMAGE_MODE=jvm
+. scripts/image-mode.sh
+echo "==> Building client-server ${IMAGE_MODE} image ${CLIENT_SERVER_IMAGE}"
+./gradlew :client-server:clean :client-server:bootBuildImage \
+  -PBP_NATIVE_IMAGE="${BP_NATIVE_IMAGE}" \
+  -Pspring-boot.build-image.imageName="${CLIENT_SERVER_IMAGE}" \
   -Pversion="${CLIENT_SERVER_IMAGE_TAG}"
 '''
 
@@ -86,42 +293,80 @@ echo "==> Building client-server image ${image_name}"
 description = "Build the resource-server native image"
 run = '''
 set -eu
-set -a; . infra/compose/.env; set +a
-image_name="${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
-echo "==> Building resource-server image ${image_name}"
+IMAGE_MODE=native
+. scripts/image-mode.sh
+echo "==> Building resource-server ${IMAGE_MODE} image ${RESOURCE_SERVER_IMAGE}"
 ./gradlew :resource-server:clean :resource-server:bootBuildImage \
-  -PBP_NATIVE_IMAGE=true \
-  -Pspring-boot.build-image.imageName="${image_name}" \
+  -PBP_NATIVE_IMAGE="${BP_NATIVE_IMAGE}" \
+  -Pspring-boot.build-image.imageName="${RESOURCE_SERVER_IMAGE}" \
+  -Pversion="${RESOURCE_SERVER_IMAGE_TAG}"
+'''
+
+[tasks."image:build:resource:jvm"]
+description = "Build the resource-server JVM image"
+run = '''
+set -eu
+IMAGE_MODE=jvm
+. scripts/image-mode.sh
+echo "==> Building resource-server ${IMAGE_MODE} image ${RESOURCE_SERVER_IMAGE}"
+./gradlew :resource-server:clean :resource-server:bootBuildImage \
+  -PBP_NATIVE_IMAGE="${BP_NATIVE_IMAGE}" \
+  -Pspring-boot.build-image.imageName="${RESOURCE_SERVER_IMAGE}" \
   -Pversion="${RESOURCE_SERVER_IMAGE_TAG}"
 '''
 
 # Docker Compose
 
 [tasks."compose:nuke"]
-description = "Remove the fixed Compose stack and its data without recreating it"
+description = "Remove the fixed Compose stack without recreating it"
 run = "scripts/nuke.sh compose"
 
 [tasks."compose:bootstrap:fresh"]
-description = "Rebuild images and recreate the fixed Compose stack with fresh data"
+description = "Rebuild native images and recreate the fixed Compose stack"
 run = "scripts/compose-bootstrap-fresh.sh"
 
+[tasks."compose:bootstrap:fresh:jvm"]
+description = "Rebuild JVM images and recreate the fixed Compose stack"
+run = "scripts/compose-bootstrap-fresh.sh jvm"
+
 [tasks."compose:build-up"]
-description = "Build all images and start the Compose stack"
+description = "Build native images and start the Compose stack"
 run = '''
 set -eu
 mise run image:build
 mise run compose:up
 '''
 
-[tasks."compose:up"]
-description = "Start the Compose stack with existing images"
+[tasks."compose:build-up:jvm"]
+description = "Build JVM images and start the Compose stack"
 run = '''
+set -eu
+mise run image:build:jvm
+mise run compose:up:jvm
+'''
+
+[tasks."compose:up"]
+description = "Start the Compose stack with existing native images"
+run = '''
+set -eu
+IMAGE_MODE=native
+. scripts/image-mode.sh
 docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml up -d --remove-orphans
 echo "==> Stack is up. Run 'mise run compose:ps' or 'mise run compose:logs' to inspect."
 '''
 
+[tasks."compose:up:jvm"]
+description = "Start the Compose stack with existing JVM images"
+run = '''
+set -eu
+IMAGE_MODE=jvm
+. scripts/image-mode.sh
+docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml up -d --remove-orphans
+echo "==> JVM stack is up. Run 'mise run compose:ps' or 'mise run compose:logs' to inspect."
+'''
+
 [tasks."compose:down"]
-description = "Stop the Compose stack while preserving named volumes"
+description = "Stop and remove the Compose stack"
 run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml down"
 
 [tasks."compose:restart"]
@@ -148,32 +393,31 @@ run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml
 description = "Follow resource-server Compose logs"
 run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f resource-server"
 
-[tasks."compose:logs:db"]
-description = "Follow Postgres Compose logs"
-run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml logs -f db"
-
 [tasks."compose:ps"]
 description = "Show Compose service status"
 run = "docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml ps"
 
-[tasks."compose:db-reset"]
-description = "Delete the Compose database volume and start a fresh stack"
-run = '''
-set -eu
-echo "!! This will delete Compose DB volumes. Ctrl+C to abort, or wait 3s..."
-sleep 3
-docker compose --env-file infra/compose/.env -f infra/compose/compose.yml -f infra/compose/compose.override.yml down -v
-mise run compose:up
-'''
+[tasks."compose:preflight"]
+description = "Check system-test configuration and reachability of the running Compose services"
+run = "./gradlew :system-tests:systemTestPreflight -PsystemTest.authServerUrl=http://localhost:9000 -PsystemTest.clientServerUrl=http://localhost:8080 -PsystemTest.resourceServerUrl=http://localhost:8081 -PsystemTest.issuer=http://host.docker.internal:9000"
+
+[tasks."compose:smoke"]
+description = "Verify essential capabilities of the already-running Compose stack"
+run = "./gradlew :system-tests:smokeTest -PsystemTest.authServerUrl=http://localhost:9000 -PsystemTest.clientServerUrl=http://localhost:8080 -PsystemTest.resourceServerUrl=http://localhost:8081 -PsystemTest.issuer=http://host.docker.internal:9000"
+
+[tasks."compose:e2e"]
+description = "Exercise real M2M token issuance and protected API access across the running Compose stack"
+run = "./gradlew :system-tests:e2eTest -PsystemTest.authServerUrl=http://localhost:9000 -PsystemTest.clientServerUrl=http://localhost:8080 -PsystemTest.resourceServerUrl=http://localhost:8081 -PsystemTest.issuer=http://host.docker.internal:9000"
 
 [tasks."compose:check"]
 description = "Print resolved image and Compose diagnostics"
 run = '''
 set -eu
-set -a; . infra/compose/.env; set +a
-echo "AUTH_SERVER_IMAGE      : ${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
-echo "CLIENT_SERVER_IMAGE    : ${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
-echo "RESOURCE_SERVER_IMAGE  : ${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
+IMAGE_MODE=native
+. scripts/image-mode.sh
+echo "AUTH_SERVER_IMAGE      : ${AUTH_SERVER_IMAGE}"
+echo "CLIENT_SERVER_IMAGE    : ${CLIENT_SERVER_IMAGE}"
+echo "RESOURCE_SERVER_IMAGE  : ${RESOURCE_SERVER_IMAGE}"
 printf "Compose version        : "; docker compose version
 echo "Root Gradle wrapper?   : $( [ -x ./gradlew ] && echo yes || echo NO )"
 echo "Auth module exists?    : $( [ -d auth-server ] && echo yes || echo NO )"
@@ -184,25 +428,48 @@ echo "Resource module exists?: $( [ -d resource-server ] && echo yes || echo NO 
 # k3d / Kubernetes
 
 [tasks."k3d:nuke"]
-description = "Remove the fixed k3d cluster and its data without recreating it"
+description = "Remove the fixed k3d cluster without recreating it"
 run = "scripts/nuke.sh k3d"
 
 [tasks."k3d:bootstrap:fresh"]
-description = "Rebuild images and recreate the fixed k3d cluster with fresh data"
+description = "Rebuild native images and recreate the fixed k3d cluster"
 run = "scripts/k3d-bootstrap-fresh.sh"
 
+[tasks."k3d:bootstrap:fresh:jvm"]
+description = "Rebuild JVM images and recreate the fixed k3d cluster"
+run = "scripts/k3d-bootstrap-fresh.sh jvm"
+
 [tasks."k3d:build-up"]
-description = "Build images, create or start the k3d cluster, and deploy"
+description = "Build native images, create or start the k3d cluster, and deploy"
 run = '''
 set -eu
 mise run image:build
 mise run k3d:up
 '''
 
-[tasks."k3d:up"]
-description = "Create or start the k3d cluster, load existing images, and deploy"
+[tasks."k3d:build-up:jvm"]
+description = "Build JVM images, create or start the k3d cluster, and deploy"
 run = '''
 set -eu
+mise run image:build:jvm
+mise run k3d:up:jvm
+'''
+
+[tasks."k3d:up"]
+description = "Create or start the k3d cluster, load existing native images, and deploy"
+run = '''
+set -eu
+export IMAGE_MODE=native
+mise run k3d:cluster-up
+mise run k3d:load
+mise run k3d:deploy
+'''
+
+[tasks."k3d:up:jvm"]
+description = "Create or start the k3d cluster, load existing JVM images, and deploy"
+run = '''
+set -eu
+export IMAGE_MODE=jvm
 mise run k3d:cluster-up
 mise run k3d:load
 mise run k3d:deploy
@@ -213,7 +480,6 @@ description = "Create the local k3d cluster when it does not exist"
 run = '''
 set -eu
 cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
-mkdir -p "${HOME}/.k3d-dcrivella-auth/data"
 if k3d cluster list | awk -v name="${cluster_name}" 'NR > 1 && $1 == name { found=1 } END { exit !found }'; then
   echo "==> k3d cluster ${cluster_name} already exists"
   k3d cluster start "${cluster_name}"
@@ -248,15 +514,12 @@ kubectl config use-context "k3d-${cluster_name}"
 '''
 
 [tasks."k3d:load"]
-description = "Import the configured application images into k3d"
+description = "Import the application images selected by IMAGE_MODE into k3d"
 run = '''
 set -eu
-set -a; . infra/compose/.env; set +a
+. scripts/image-mode.sh
 cluster_name="${K3D_CLUSTER_NAME:-dcrivella-auth}"
-auth_image="${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
-client_image="${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
-resource_image="${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
-k3d image import "${auth_image}" "${client_image}" "${resource_image}" -c "${cluster_name}"
+k3d image import "${AUTH_SERVER_IMAGE}" "${CLIENT_SERVER_IMAGE}" "${RESOURCE_SERVER_IMAGE}" -c "${cluster_name}"
 '''
 
 [tasks."k3d:render"]
@@ -264,24 +527,8 @@ description = "Render the local Kubernetes overlay to stdout"
 run = "kustomize build --load-restrictor LoadRestrictionsNone infra/k8s/overlays/local"
 
 [tasks."k3d:deploy"]
-description = "Apply local Kubernetes manifests and wait for rollouts"
-run = '''
-set -eu
-set -a; . infra/compose/.env; set +a
-namespace="${K8S_NAMESPACE:-dcrivella-auth}"
-auth_image="${AUTH_SERVER_IMAGE_NAME:-dcrivella/auth-server}:${AUTH_SERVER_IMAGE_TAG}"
-client_image="${CLIENT_SERVER_IMAGE_NAME:-dcrivella/client-server}:${CLIENT_SERVER_IMAGE_TAG}"
-resource_image="${RESOURCE_SERVER_IMAGE_NAME:-dcrivella/resource-server}:${RESOURCE_SERVER_IMAGE_TAG}"
-kustomize build --load-restrictor LoadRestrictionsNone infra/k8s/overlays/local | kubectl apply -f -
-kubectl -n "${namespace}" set image deployment/auth-server auth-server="${auth_image}"
-kubectl -n "${namespace}" set image deployment/client-server client-server="${client_image}"
-kubectl -n "${namespace}" set image deployment/resource-server resource-server="${resource_image}"
-kubectl -n "${namespace}" rollout status statefulset/db --timeout=180s
-kubectl -n "${namespace}" rollout status deployment/auth-server --timeout=180s
-kubectl -n "${namespace}" rollout status deployment/resource-server --timeout=180s
-kubectl -n "${namespace}" rollout status deployment/client-server --timeout=180s
-echo "==> k3d stack is up. Open http://localhost:8080"
-'''
+description = "Apply IMAGE_MODE manifests, restart only unchanged same-tag deployments, and wait for rollouts"
+run = "bash scripts/k3d-deploy.sh"
 
 [tasks."k3d:logs"]
 description = "Follow logs from all local Kubernetes workloads"
@@ -299,26 +546,21 @@ run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f deployment/client-ser
 description = "Follow resource-server Kubernetes logs"
 run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f deployment/resource-server"
 
-[tasks."k3d:logs:db"]
-description = "Follow Postgres Kubernetes logs"
-run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} logs -f statefulset/db"
-
 [tasks."k3d:ps"]
-description = "Show local Kubernetes workloads and storage"
-run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} get pods,svc,pvc"
+description = "Show local Kubernetes workloads and services"
+run = "kubectl -n ${K8S_NAMESPACE:-dcrivella-auth} get pods,svc"
 
-[tasks."k3d:db-reset"]
-description = "Delete the k3d Postgres PVC and recreate Postgres"
-run = '''
-set -eu
-namespace="${K8S_NAMESPACE:-dcrivella-auth}"
-echo "!! This deletes the Postgres PVC in k3d. Ctrl+C to abort, or wait 3s..."
-sleep 3
-kubectl -n "${namespace}" delete statefulset db --ignore-not-found
-kubectl -n "${namespace}" delete pvc -l app=db --ignore-not-found
-kustomize build --load-restrictor LoadRestrictionsNone infra/k8s/overlays/local | kubectl apply -f -
-kubectl -n "${namespace}" rollout status statefulset/db --timeout=180s
-'''
+[tasks."k3d:preflight"]
+description = "Check system-test configuration and reachability of the running k3d services"
+run = "./gradlew :system-tests:systemTestPreflight -PsystemTest.authServerUrl=http://localhost:9000 -PsystemTest.clientServerUrl=http://localhost:8080 -PsystemTest.resourceServerUrl=http://localhost:8081 -PsystemTest.issuer=http://host.k3d.internal:9000"
+
+[tasks."k3d:smoke"]
+description = "Verify essential capabilities of the already-running k3d stack"
+run = "./gradlew :system-tests:smokeTest -PsystemTest.authServerUrl=http://localhost:9000 -PsystemTest.clientServerUrl=http://localhost:8080 -PsystemTest.resourceServerUrl=http://localhost:8081 -PsystemTest.issuer=http://host.k3d.internal:9000"
+
+[tasks."k3d:e2e"]
+description = "Exercise real M2M token issuance and protected API access across the running k3d stack"
+run = "./gradlew :system-tests:e2eTest -PsystemTest.authServerUrl=http://localhost:9000 -PsystemTest.clientServerUrl=http://localhost:8080 -PsystemTest.resourceServerUrl=http://localhost:8081 -PsystemTest.issuer=http://host.k3d.internal:9000"
 
 [tasks."k3d:check"]
 description = "Print k3d and Kubernetes diagnostics"
@@ -328,7 +570,6 @@ echo "K3D_CLUSTER_NAME       : ${K3D_CLUSTER_NAME:-dcrivella-auth}"
 echo "K8S_NAMESPACE          : ${K8S_NAMESPACE:-dcrivella-auth}"
 echo "K3D config             : infra/k3d/cluster-config.yaml"
 echo "K8s local overlay      : infra/k8s/overlays/local"
-echo "Postgres init SQL      : infra/db/init/001-provision_auth.sql"
 printf "k3d version            : "; k3d --version
 printf "kustomize version      : "; kustomize version
 printf "kubectl client         : "; kubectl version --client=true

@@ -9,7 +9,10 @@ This repository is a single **Gradle multi-project build** with one root wrapper
 - **auth-server** → Spring Authorization Server (OIDC, OAuth2 flows)
 - **client-server** → Example web client (PKCE, Thymeleaf UI)
 - **resource-server** → Example API protected by JWT
-- **infra** → Compose, k3d, Kubernetes manifests and shared local DB init scripts
+- **architecture-tests** → Cross-module static dependency and convention checks
+- **system-tests** → Black-box smoke and M2M end-to-end tests for active runtimes
+- **playwright** → Browser login, consent, protected tasks and OIDC logout tests
+- **infra** → Compose, k3d and Kubernetes manifests for the three applications
 - **postman** → Postman collection and environment
 
 ```text
@@ -18,17 +21,18 @@ dcrivella-auth/
 ├─ auth-server/                    # Spring Authorization Server module; issues OAuth2/OIDC tokens
 ├─ client-server/                  # OAuth2/OIDC web client module; login UI and resource-server calls
 ├─ resource-server/                # JWT-protected API module; validates issuer, audience and scopes
+├─ architecture-tests/             # cross-module ArchUnit rules
+├─ system-tests/                   # runtime-independent black-box test source set
+├─ playwright/                     # isolated mock and real browser OAuth suites
+├─ docs/                           # architecture, runtime and testing documentation
 ├─ postman/                        # Postman collections for exercising the OAuth2/OIDC flows
 ├─ infra/                          # local runtime infrastructure shared by Compose and k3d
 │  ├─ compose/                     # Docker Compose runtime definition
-│  │  ├─ compose.yml               # base Compose stack: Postgres, auth, client and resource services
+│  │  ├─ compose.yml               # base Compose stack: auth, client and resource services
 │  │  ├─ compose.override.yml      # local dev overrides: host ports and restart policy
-│  │  └─ .env                      # image tags, ports, issuer, DB credentials and audience values
-│  ├─ db/                          # database assets shared by all local runtime modes
-│  │  └─ init/                     # scripts mounted into the Postgres init directory
-│  │     └─ 001-provision_auth.sql # creates auth_server DB, auth schema and auth_user role
+│  │  └─ .env                      # image tags, ports, issuer and audience values
 │  ├─ k3d/                         # local Kubernetes cluster definition
-│  │  └─ cluster-config.yaml       # k3d cluster name, k3s image, ports, volume and kubeconfig behavior
+│  │  └─ cluster-config.yaml       # k3d cluster name, k3s image, ports and kubeconfig behavior
 │  ├─ k8s/                         # Kubernetes manifests
 │  │  └─ overlays/                 # Kustomize environment overlays
 │  │     └─ local/                 # local k3d overlay, one resource/service per YAML file
@@ -50,10 +54,14 @@ mise install
 mise tasks
 ```
 
-The project configuration tracks the current Temurin Java 25 patch and pins the
-k3d, standalone Kustomize and kubectl versions used by the local Kubernetes
-workflow. Gradle is not installed by mise because the repository uses its root
-wrapper (`./gradlew`).
+The project configuration tracks the current Temurin Java 25 patch and pins
+Node 24.19.0, k3d, standalone Kustomize and kubectl. Gradle is not installed by
+mise because the repository uses its root wrapper (`./gradlew`).
+
+The Gradle configuration cache is enabled in strict mode. The project pins the
+embedded Kotlin/IntelliJ idempotence-check rate to its documented default so
+the cache key remains stable across Gradle daemons; cache incompatibilities
+still fail the build instead of being ignored.
 
 Docker Engine and Docker Compose v2 remain system prerequisites. k3d and
 Kustomize and kubectl are only needed when using the optional Kubernetes runtime.
@@ -97,17 +105,19 @@ mise run compose:build-up
 ```
 
 - `mise run compose:build-up` → builds the images and then starts the Compose stack. Use this on a fresh checkout or after code changes.
+- `mise run compose:build-up:jvm` → uses the faster JVM image flow for local development.
 
-- `mise run compose:bootstrap:fresh` → rebuilds all images, then permanently deletes and recreates the fixed `dcrivella-auth-stack` Compose project, including its containers, networks and `db-data` volume. It refuses to run while the `dcrivella-auth` k3d cluster is active and requires `[y/N]` confirmation.
+- `mise run compose:bootstrap:fresh` → rebuilds all images, then deletes and recreates the fixed `dcrivella-auth-stack` Compose project. It refuses to run while the `dcrivella-auth` k3d cluster is active and requires `[y/N]` confirmation.
+- `mise run compose:bootstrap:fresh:jvm` → runs the same guarded bootstrap with JVM images.
 
-- `mise run compose:nuke` → permanently deletes that fixed Compose project and its declared volumes without rebuilding or recreating it. Local images and build caches are preserved, and `[y/N]` confirmation is required.
+- `mise run compose:nuke` → deletes that fixed Compose project without rebuilding or recreating it. Local images and build caches are preserved, and `[y/N]` confirmation is required.
 
 - `mise run image:build` → only builds the images.
 
 - `mise run compose:up` → only starts the Compose stack. Use this for later runs when the images already exist locally.
+- `mise run compose:up:jvm` → starts existing JVM images without rebuilding them.
 
-- `mise run compose:down` → removes the Compose containers and networks while preserving `db-data`.
-- `mise run compose:db-reset` → performs a quick database-only reset using existing images.
+- `mise run compose:down` → removes the Compose containers and networks.
 - `mise run compose:bootstrap:fresh` → deletes and recreates the complete Compose environment.
 - `mise run compose:nuke` → deletes the Compose environment without recreating it or starting any services.
 
@@ -119,14 +129,22 @@ Username: user
 Password: pass
 ```
 
+On the consent screen, select `api.read` before submitting. If it is not
+granted, login still succeeds but `/tasks` correctly returns `403` because the
+access token contains no `SCOPE_api.read` authority.
+
+Consent is authorization-server state, not browser state. See
+[User Consent](docs/oauth2-oidc-overview.md#user-consent) for what survives
+logout and token expiration, and why restarting `auth-server` clears consent in
+this project.
+
 ## Quick Run With k3d
 The k3d option creates a local Kubernetes cluster and deploys the same services there:
 
-- Postgres as a `StatefulSet`
 - `auth-server`, `client-server` and `resource-server` as Kubernetes `Deployment`s
 - NodePort services exposed through k3d port mappings
 
-Do not run the Compose stack and k3d stack at the same time. Both modes expose the same host ports: `9000`, `8080`, `8081` and `5432`.
+Do not run the Compose stack and k3d stack at the same time. Both modes expose the same host ports: `9000`, `8080` and `8081`.
 
 The k3d manifests use:
 
@@ -141,16 +159,19 @@ mise run k3d:build-up
 ```
 
 - `mise run k3d:build-up` → builds the images, creates the cluster if needed, imports images into k3d and deploys Kubernetes manifests.
-- `mise run k3d:bootstrap:fresh` → rebuilds all images, then permanently deletes and recreates the fixed `dcrivella-auth` cluster and its data at `$HOME/.k3d-dcrivella-auth/data`. It refuses to run while this project's Compose services are active and requires `[y/N]` confirmation.
+- `mise run k3d:build-up:jvm` → performs the same flow with the faster JVM images.
+- `mise run k3d:bootstrap:fresh` → rebuilds all images, then deletes and recreates the fixed `dcrivella-auth` cluster. It refuses to run while this project's Compose services are active and requires `[y/N]` confirmation.
+- `mise run k3d:bootstrap:fresh:jvm` → runs the same guarded bootstrap with JVM images.
 - `mise run k3d:up` → creates the cluster if needed, imports already-built images and deploys manifests.
+- `mise run k3d:up:jvm` → imports and deploys existing JVM images without rebuilding them.
 - `mise run k3d:render` → renders the local Kustomize overlay to stdout without applying it.
 - `mise run k3d:cluster-stop` / `mise run k3d:cluster-start` → stop/start the existing cluster without deleting Kubernetes resources.
-- `mise run k3d:cluster-down` → deletes the k3d cluster but leaves `$HOME/.k3d-dcrivella-auth/data` on the host.
-- `mise run k3d:nuke` → deletes the fixed cluster when it exists and then permanently removes that data directory without rebuilding or recreating the environment. Local images and build caches are preserved, and `[y/N]` confirmation is required.
+- `mise run k3d:cluster-down` → deletes the k3d cluster.
+- `mise run k3d:nuke` → deletes the fixed cluster without rebuilding or recreating the environment. Local images and build caches are preserved, and `[y/N]` confirmation is required.
 
 - `mise run k3d:build-up` → provides the normal, non-destructive rebuild/deploy flow.
-- `mise run k3d:bootstrap:fresh` → erases all k3d persistent data, including orphaned PVC data, then recreates the cluster and database.
-- `mise run k3d:nuke` → erases the cluster and persistent data without recreating the cluster or starting any services.
+- `mise run k3d:bootstrap:fresh` → recreates the cluster after rebuilding images.
+- `mise run k3d:nuke` → removes the cluster without recreating it or starting services.
 - `mise run nuke` → preflights both runtimes, asks for confirmation once, removes Compose before k3d, continues with the other cleanup after a partial failure, reports whether to repeat `mise run compose:nuke` or `mise run k3d:nuke`, and preserves Docker images and build caches.
 
 Open the client application in your browser:
@@ -161,6 +182,36 @@ http://localhost:8080
 Username: user
 Password: pass
 ```
+
+### Run the resource server locally with mirrord
+
+Mirrord is supported only for `ResourceServerApplication`. The auth server and
+client server remain in k3d so the browser-facing OIDC session, redirect URI and
+logout flow always use the deployed applications.
+
+With the `dcrivella-auth` cluster running:
+
+1. Select `.mirrord/resource-server.json` as the existing mirrord configuration.
+   Do not ask the plugin to create a new targetless configuration.
+2. Run `ResourceServerApplication` with an IntelliJ Application or Spring Boot
+   run configuration, not a Gradle run configuration.
+3. Leave IntelliJ's **Active profiles** field empty. Mirrord imports the `docker`
+   profile, public `ISSUER_URL`, internal `JWK_SET_URI` and audience from the
+   resource-server pod. It overrides only `SERVER_PORT`, using local port `18081`
+   while stealing the Deployment's public port `8081`.
+4. Continue browsing at `http://localhost:8080`. Do not open port `18081`
+   directly; it belongs only to the mirrord bridge.
+
+The token issuer remains `http://host.k3d.internal:9000`, so the JWT `iss` claim
+is checked against the same public identity used by the browser and client pod.
+The local process obtains signing keys separately from
+`http://auth-server:9000/oauth2/jwks` through mirrord's cluster network. Signature,
+issuer, audience and `SCOPE_api.read` validation all remain enabled.
+
+Without the mirrord session, the resource-server pod handles the client's
+`/tasks` call. While the session is active, the same traffic is stolen by the
+local `ResourceServerApplication`. Stopping it returns traffic to the pod; no
+Deployment is replaced by a `pause` or BusyBox container.
 
 ## Running Options
 
@@ -236,6 +287,40 @@ docker run --rm -p 9000:9000 \
 The project uses a root Gradle multi-project build with one wrapper (`./gradlew`). <br>
 Use module-qualified task names, for example `:auth-server:bootRun`, `:client-server:test` or `:resource-server:bootBuildImage`.
 
+The test levels, mocking rules, BDD comment convention, source sets and current
+OAuth persistence boundary are documented in [Testing Strategy](docs/testing-strategy.md).
+
+```zsh
+mise run test              # fast unit, web slice and standard architecture tests
+mise run test:integration  # Spring and external HTTP boundary integration suites
+mise run test:all          # unit, slice, integration and all architecture suites
+mise run coverage          # test + integration coverage reports with JaCoCo
+mise run test:mutation     # focused test-strength reports with PIT
+mise run mock:playwright      # mock browser scenarios, headless
+mise run mock:playwright:ui   # same mock scenarios in Playwright UI
+
+# Require the corresponding runtime to be active already:
+mise run compose:playwright      # Compose browser scenarios, headless
+mise run compose:playwright:ui   # same Compose scenarios in Playwright UI
+mise run k3d:playwright          # k3d browser scenarios, headless
+mise run k3d:playwright:ui       # same k3d scenarios in Playwright UI
+```
+
+Install the Chromium binary once with `mise run playwright:install`. Playwright
+1.62.1 is isolated under `playwright/`. Browser execution task names start with
+the selected runtime (`mock`, `compose` or `k3d`); `playwright:install` and
+`playwright:report` remain tool operations. Commands without `:ui` run
+automatically in headless mode; the matching `:ui` commands open the interactive
+Playwright test explorer and visible Chromium while preserving the same profile,
+preflight, URLs and three scenarios. The mock and real browser boundaries,
+covered consent scenarios and token-safe artifact policy are documented in
+[Testing Strategy](docs/testing-strategy.md).
+
+Playwright uses the dedicated `playwright` / `playwright-pass` account so its
+stored consent and single-login session do not affect the manual `user` / `pass`
+account. UI timeline artifacts are temporary and are removed when the explorer
+closes.
+
 Check the wrapper version:
 ```zsh
 ./gradlew -v
@@ -252,57 +337,62 @@ mise run format
 mise run lint
 ```
 
-The equivalent Gradle tasks are `./gradlew spotlessApply` and `./gradlew spotlessCheck`. Each module's `check` task also runs the Spotless check.
+These commands run Spotless. Each module's `check` task runs the same formatting
+check; integration and black-box tests remain opt-in.
 
 ### Build Images
 
 Use these commands to generate the Docker/OCI images used by both Compose and k3d.
 
-- **mise run image:build:auth** → builds the `auth-server` image using Gradle’s `bootBuildImage` and Paketo Buildpacks.
-- **mise run image:build:client** → builds the `client-server` image.
-- **mise run image:build:resource** → builds the `resource-server` image.
-- **mise run image:build** → builds all three images sequentially.
+- **mise run image:build:auth**, **:client**, **:resource** → build each native image using Gradle’s `bootBuildImage` and Paketo Buildpacks.
+- **mise run image:build** → builds all three `1.0.0-native` images sequentially.
+- **mise run image:build:auth:jvm**, **:client:jvm**, **:resource:jvm** → build the corresponding JVM image.
+- **mise run image:build:jvm** → builds all three `1.0.0-jvm` images sequentially.
+
+JVM images are the faster development path. Native images remain the dedicated
+GraalVM compilation/runtime validation path.
 
 ### Compose Stack
 
 Use these commands to run the local stack with Docker Compose.
 
-- **mise run compose:build-up** → builds images and starts the Compose stack.
-- **mise run compose:bootstrap:fresh** → rebuilds images and, after confirmation, recreates the `dcrivella-auth-stack` project, including containers, networks and the `db-data` volume. <br> ⚠️ This permanently wipes all local Compose data and is blocked while the `dcrivella-auth` k3d cluster is active.
-- **mise run compose:nuke** → after confirmation, removes the fixed project with `down -v --remove-orphans` without recreating its containers or starting any services. Images and build caches are preserved.
+- **mise run compose:build-up** / **compose:build-up:jvm** → build native/JVM images and start the Compose stack.
+- **mise run compose:bootstrap:fresh** → rebuilds images and, after confirmation, recreates the `dcrivella-auth-stack` containers and networks. It is blocked while the `dcrivella-auth` k3d cluster is active.
+- **mise run compose:nuke** → after confirmation, removes the fixed project with `down --remove-orphans` without recreating its containers or starting services. Images and build caches are preserved.
 - **mise run compose:up** / **compose:down** / **compose:restart** → control the stack lifecycle.
-- **mise run compose:logs** → tails all logs; use `compose:logs:auth`, `:client`, `:resource` or `:db` for one service.
+- **mise run compose:logs** → tails all logs; use `compose:logs:auth`, `:client` or `:resource` for one service.
 - **mise run compose:ps** → shows Compose container status.
-- **mise run compose:db-reset** → deletes Postgres volumes and starts a fresh stack. <br> ⚠️ This wipes all local Compose data; use `compose:down` to preserve it.
+- **mise run compose:preflight** → checks system-test URLs and confirms that all three Compose services are reachable without changing them.
+- **mise run compose:smoke** → verifies core availability and security scenarios against the already-running Compose stack.
+- **mise run compose:e2e** → crosses the real Compose services: the authorization server issues a token and the resource server validates it before returning tasks.
 - **mise run compose:check** → prints Compose diagnostics.
 
-- **mise run compose:down** → preserves the database volume.
-- **mise run compose:db-reset** → recreates only the database using existing images.
-- **mise run compose:bootstrap:fresh** → deletes the runtime and data and then recreates them.
-- **mise run compose:nuke** → deletes the runtime and data without recreating them.
+- **mise run compose:bootstrap:fresh** → deletes the runtime and then recreates it.
+- **mise run compose:nuke** → deletes the runtime without recreating it.
 
 ### k3d Cluster
 
 Use these commands to run the local stack in a k3d Kubernetes cluster.
 
-- **mise run k3d:build-up** → builds images, creates/starts the cluster, imports images and deploys Kubernetes manifests.
-- **mise run k3d:bootstrap:fresh** → rebuilds images and, after confirmation, deletes the `dcrivella-auth` cluster plus `$HOME/.k3d-dcrivella-auth/data` before recreating the complete environment. <br> ⚠️ This permanently wipes all local k3d data and is blocked while this project's Compose stack is active.
+- **mise run k3d:build-up** / **k3d:build-up:jvm** → build native/JVM images, create/start the cluster, import images and deploy Kubernetes manifests.
+- **mise run k3d:bootstrap:fresh** → rebuilds images and, after confirmation, deletes and recreates the `dcrivella-auth` cluster. It is blocked while this project's Compose stack is active.
 - **mise run k3d:up** → deploys using already-built images.
 - **mise run k3d:render** → renders the local overlay with standalone Kustomize without applying it.
 - **mise run k3d:cluster-stop** / **cluster-start** / **cluster-down** → control the cluster lifecycle.
-- **mise run k3d:nuke** → after confirmation, deletes the fixed cluster and `$HOME/.k3d-dcrivella-auth/data` without recreating the cluster or starting any services. Images and build caches are preserved.
-- **mise run k3d:ps** → shows Kubernetes pods, services and PVCs.
-- **mise run k3d:logs** → tails all workload logs; use `k3d:logs:auth`, `:client`, `:resource` or `:db` for one workload.
-- **mise run k3d:db-reset** → deletes the Postgres PVC and recreates Postgres. <br> ⚠️ This wipes the k3d database.
+- **mise run k3d:nuke** → after confirmation, deletes the fixed cluster without recreating it or starting services. Images and build caches are preserved.
+- **mise run k3d:ps** → shows Kubernetes pods and services.
+- **mise run k3d:preflight** → checks system-test URLs and confirms that all three k3d services are reachable without changing them.
+- **mise run k3d:smoke** → verifies core availability and security scenarios against the already-running k3d stack.
+- **mise run k3d:e2e** → crosses the real k3d services: the authorization server issues a token and the resource server validates it before returning tasks.
+- **mise run k3d:logs** → tails all workload logs; use `k3d:logs:auth`, `:client` or `:resource` for one workload.
 
-- **mise run k3d:cluster-down** → deletes only the cluster and keeps its host data directory.
-- **mise run k3d:bootstrap:fresh** → deletes runtime and data, recreates both, and refuses to run while Compose is active.
-- **mise run k3d:nuke** → deletes runtime and data without rebuilding, recreating, or starting services.
+- **mise run k3d:cluster-down** → deletes the cluster.
+- **mise run k3d:bootstrap:fresh** → deletes and recreates the runtime and refuses to run while Compose is active.
+- **mise run k3d:nuke** → deletes the runtime without rebuilding, recreating or starting services.
 
-Use **mise run nuke** to remove both runtimes and both persistent data stores
-with one confirmation. It preflights every selected target before mutation,
-orders Compose before k3d, continues after a partial cleanup failure, and
-preserves Docker images and build caches.
+Use **mise run nuke** to remove both runtimes with one confirmation. It
+preflights every selected target before mutation, orders Compose before k3d,
+continues after a partial cleanup failure, and preserves images and build caches.
 
 ## Project Notes
 
@@ -311,52 +401,3 @@ preserves Docker images and build caches.
 - [Browser Clients and Token Lifecycle](docs/browser-clients-and-token-lifecycle.md) covers refresh tokens, SPA/BFF tradeoffs, browser cookies, sessions, rotation, expiration and invalidation.
 - [Container Images](docs/container-images.md) explains the repository's Paketo Buildpack flow and the historical Kaniko/current BuildKit comparison for Dockerfile builds.
 - [Stack Commands](docs/stack-commands.md) maps every mise task to its Gradle, Docker Compose or Kubernetes behavior.
-
-## Database Connection Details
-
-- **Database name**: `auth_server`
-- **Schema**: `auth`
-- **User**: `auth_user`
-- **Password**: `auth_pass`
-- **Host**:
-  - Inside Docker Compose → `db`
-  - Inside k3d/Kubernetes → `db.dcrivella-auth.svc.cluster.local` or `db`
-  - From host machine → `localhost` (or `127.0.0.1`)
-- **Port**: `5432` (default PostgreSQL port)
-
-### Connection Strings
-
-- **JDBC (SQuirrel SQL, IntelliJ, etc.)** → `jdbc:postgresql://localhost:5432/auth_server?currentSchema=auth`
-
-- **psql CLI (from host ZSH)** →
-  ```zsh
-  psql -h localhost -p 5432 -U auth_user -d auth_server
-  ```
-
-### Installing psql
-If you don't have the PostgreSQL CLI (psql) installed, install it:
-
-- macOS (Homebrew)
-
-    ```zsh
-    brew install libpq
-    brew link --force libpq
-    psql --version
-    ```
-
-- Linux (Debian/Ubuntu)
-    ```zsh
-    sudo apt install -y wget ca-certificates gnupg
-    
-    wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
-      gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/pgdg.gpg > /dev/null
-
-    echo "deb http://apt.postgresql.org/pub/repos/apt noble-pgdg main" | \
-      sudo tee /etc/apt/sources.list.d/pgdg.list
-
-    sudo apt update
-
-    sudo apt install -y postgresql-client-18
-
-    psql --version
-    ```

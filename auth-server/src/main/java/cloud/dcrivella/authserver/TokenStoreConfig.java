@@ -16,9 +16,20 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
 
+/**
+ * Provides the ephemeral RSA signing key and JWT decoder used by the authorization server.
+ *
+ * @author Douglas Crivella
+ * @created August 8, 2026
+ */
 @Configuration
 public class TokenStoreConfig {
 
+    /**
+     * Creates the JSON Web Key source exposed through the authorization server JWKS endpoint.
+     *
+     * @return a key source containing the current RSA signing key
+     */
     @Bean
     protected JWKSource<SecurityContext> jwkSource() {
         KeyPair keyPair = generateRsaKey();
@@ -29,11 +40,23 @@ public class TokenStoreConfig {
         return new ImmutableJWKSet<>(jwkSet);
     }
 
+    /**
+     * Creates a decoder backed by the same key source used to sign tokens.
+     *
+     * @param jwkSource authorization server signing key source
+     * @return decoder for JWT-encoded tokens
+     */
     @Bean
     protected JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
 
+    /**
+     * Generates a new RSA key pair for the current authorization server process.
+     *
+     * @return a 2048-bit RSA key pair
+     * @throws IllegalStateException when the runtime cannot generate an RSA key pair
+     */
     private static KeyPair generateRsaKey() {
         KeyPair keyPair;
         try {

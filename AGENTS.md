@@ -6,10 +6,10 @@ This repository is a Java 25 / Spring Boot 4 OAuth2 learning project built as a 
 
 Modules:
 
-- `auth-server`: Spring Authorization Server with OIDC, OAuth2 flows, Postgres persistence, Flyway and token audience customization.
+- `auth-server`: Spring Authorization Server with OIDC, OAuth2 flows, in-memory stores and token audience customization.
 - `client-server`: Example OAuth2/OIDC web client using authorization code + PKCE, Thymeleaf and WebClient calls to the resource server.
 - `resource-server`: Example JWT-protected API with issuer and audience validation.
-- `infra`: Docker Compose and k3d infrastructure for Postgres plus the three application services.
+- `infra`: Docker Compose and k3d infrastructure for the three application services.
 - `postman`: Local Postman collection and environment.
 
 ## Required Tools
@@ -33,7 +33,6 @@ Modules:
 - Start an already-built stack: `mise run compose:up`
 - Stop the stack: `mise run compose:down`
 - Tail stack logs: `mise run compose:logs`
-- Reset the local Postgres volume: `mise run compose:db-reset`
 
 Use module-qualified Gradle task names when possible.
 
@@ -71,19 +70,18 @@ Use module-qualified Gradle task names when possible.
 - For cross-module auth flow or shared configuration changes, run `./gradlew test`.
 - Native image and Docker image builds are slower; run them only when the change touches GraalVM/runtime hints, Docker/Paketo configuration or the user asks for full verification.
 
-## Database And Migrations
+## Persistence
 
-- The auth server uses Postgres with schema `auth`.
-- Flyway migrations belong under `auth-server/src/main/resources/db/migration`.
-- Do not edit an existing migration that may already have been applied; add a new migration instead.
-- Local Docker database credentials are documented in `README.md` and `infra/compose/.env`.
+- OAuth clients, users, authorizations, signing keys and resource-server tasks are intentionally in memory.
+- Local Compose and k3d runtimes do not require a database or persistent volume.
+- Do not introduce database infrastructure unless the user explicitly requests a persistence exercise.
 
 ## Git And Workspace
 
 - Do not revert unrelated user changes.
 - Before editing, inspect the relevant files and preserve existing style.
 - Avoid broad refactors unless the user requests them.
-- If a command may wipe local state, such as `mise run compose:db-reset`, explain that before running it.
+- Explain any command that removes or recreates a local runtime before running it.
 
 
 <!-- headroom:rtk-instructions -->

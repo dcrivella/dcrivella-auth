@@ -15,21 +15,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Registers token customization for access tokens.
- * <p>
- * Reads {@link TokenAudienceProperties} (prefix {@code auth.token}) and, when a mapping exists for the current {@code clientId}, sets the
- * JWT {@code aud} claim to the configured list of audience values.
- * <p>
- * Access tokens are meant for resource servers, so OIDC login scopes such as {@code openid} and {@code profile} are removed from the access
- * token {@code scope} claim. Those scopes remain part of the authorization request and ID token flow. No change is made for ID tokens.
+ * Customizes access tokens with each OAuth client's resource audience and API scopes.
+ *
+ * @author Douglas Crivella
+ * @created August 8, 2026
  */
 @Configuration
 @EnableConfigurationProperties(TokenAudienceProperties.class)
 public class AuthTokenCustomizerConfig {
 
     /**
-     * Customizes access token claims to include the configured {@code aud} claim and expose only API scopes in the access token
-     * {@code scope} claim.
+     * Adds the configured {@code aud} claim and removes OpenID Connect login scopes from access tokens.
+     *
+     * @param props audience mappings keyed by OAuth client identifier
+     * @return the access token claims customizer
      */
     @Bean
     protected OAuth2TokenCustomizer<JwtEncodingContext> audienceTokenCustomizer(TokenAudienceProperties props) {

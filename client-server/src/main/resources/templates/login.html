@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Sign-in status | Dcrivella Auth</title>
+        <style>
+            :root {
+                color-scheme: light;
+                font-family:
+                    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    sans-serif;
+                color: #102a43;
+                background: #f4f7fb;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                min-height: 100vh;
+                margin: 0;
+                display: grid;
+                place-items: center;
+                padding: 1.5rem;
+                background:
+                    radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 32rem),
+                    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 28rem),
+                    #f4f7fb;
+            }
+
+            .card {
+                width: min(100%, 35rem);
+                padding: clamp(2rem, 7vw, 3.5rem);
+                border: 1px solid rgba(148, 163, 184, 0.28);
+                border-radius: 1.5rem;
+                background: rgba(255, 255, 255, 0.94);
+                box-shadow:
+                    0 1.5rem 4rem rgba(15, 23, 42, 0.12),
+                    0 0.25rem 1rem rgba(15, 23, 42, 0.05);
+                text-align: center;
+                backdrop-filter: blur(0.75rem);
+            }
+
+            .brand {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.6rem;
+                margin-bottom: 2rem;
+                color: #334e68;
+                font-size: 0.78rem;
+                font-weight: 750;
+                letter-spacing: 0.13em;
+                text-transform: uppercase;
+            }
+
+            .brand-mark {
+                width: 0.75rem;
+                height: 0.75rem;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #2563eb, #0ea5e9);
+                box-shadow: 0 0 0 0.3rem rgba(37, 99, 235, 0.1);
+            }
+
+            .status-icon {
+                width: 4.5rem;
+                height: 4.5rem;
+                margin: 0 auto 1.5rem;
+                display: grid;
+                place-items: center;
+                border-radius: 1.35rem;
+                color: #1d4ed8;
+                background: linear-gradient(145deg, #eff6ff, #dbeafe);
+                box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+            }
+
+            .status-icon svg {
+                width: 2.15rem;
+                height: 2.15rem;
+            }
+
+            h1 {
+                margin: 0;
+                color: #102a43;
+                font-size: clamp(1.8rem, 6vw, 2.45rem);
+                line-height: 1.12;
+                letter-spacing: -0.035em;
+            }
+
+            .lead {
+                margin: 1rem auto 0;
+                color: #526d82;
+                font-size: 1.03rem;
+                line-height: 1.65;
+            }
+
+            .notice {
+                margin: 1.75rem 0;
+                padding: 1rem 1.1rem;
+                border: 1px solid #dbeafe;
+                border-radius: 1rem;
+                color: #334e68;
+                background: #f8fbff;
+                font-size: 0.92rem;
+                line-height: 1.55;
+                text-align: left;
+            }
+
+            .notice strong {
+                display: block;
+                margin-bottom: 0.2rem;
+                color: #1e3a5f;
+            }
+
+            .action {
+                width: 100%;
+                min-height: 3.15rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.65rem;
+                border-radius: 0.9rem;
+                color: #fff;
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                box-shadow: 0 0.65rem 1.5rem rgba(37, 99, 235, 0.22);
+                font-weight: 700;
+                text-decoration: none;
+                transition:
+                    transform 160ms ease,
+                    box-shadow 160ms ease;
+            }
+
+            .action:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 0.8rem 1.8rem rgba(37, 99, 235, 0.28);
+            }
+
+            .action:focus-visible {
+                outline: 0.2rem solid rgba(37, 99, 235, 0.3);
+                outline-offset: 0.2rem;
+            }
+
+            .action svg {
+                width: 1.15rem;
+                height: 1.15rem;
+            }
+
+            .helper {
+                margin: 1rem 0 0;
+                color: #829ab1;
+                font-size: 0.82rem;
+                line-height: 1.5;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .action {
+                    transition: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="card" aria-labelledby="page-title">
+            <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Dcrivella Auth</div>
+
+            <div class="status-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M12 3 5.5 5.8v5.1c0 4.3 2.6 8.2 6.5 10.1 3.9-1.9 6.5-5.8 6.5-10.1V5.8L12 3Z"/>
+                    <path d="m9.2 9.2 5.6 5.6m0-5.6-5.6 5.6"/>
+                </svg>
+            </div>
+
+            <section th:if="${consentDenied}">
+                <h1 id="page-title">Consent not granted</h1>
+                <p class="lead">You chose not to grant this application access to your account.</p>
+                <div class="notice">
+                    <strong>Your account remains unchanged.</strong>
+                    No information was shared, and no application session was created.
+                </div>
+            </section>
+
+            <section th:if="${loginFailed and !consentDenied}">
+                <h1 id="page-title">Sign-in not completed</h1>
+                <p class="lead">The authorization server could not complete this sign-in request.</p>
+                <div class="notice">
+                    <strong>Your account remains secure.</strong>
+                    Review the request and try again. If the problem continues, contact the application administrator.
+                </div>
+            </section>
+
+            <section th:if="${!loginFailed}">
+                <h1 id="page-title">Ready to sign in?</h1>
+                <p class="lead">Continue to the authorization server to access the application.</p>
+                <div class="notice">
+                    <strong>You stay in control.</strong>
+                    Review the requested permissions before deciding whether to grant access.
+                </div>
+            </section>
+
+            <a class="action" th:href="@{/oauth2/authorization/client-server-pkce-oidc}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6"/>
+                </svg>
+                <span th:text="${loginFailed} ? 'Try sign-in again' : 'Continue to sign in'">Try sign-in again</span>
+            </a>
+            <p class="helper">You can review the requested permissions again before continuing.</p>
+        </main>
+    </body>
+</html>

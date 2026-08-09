@@ -1,0 +1,166 @@
+name: Client Server CI
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: Java version used by Client Server CI
+        required: true
+        type: string
+      node-version:
+        description: Node.js version used by Client Server CI
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Run Client unit tests
+        run: ./gradlew :client-server:test --no-daemon
+
+      - name: Publish Client unit test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Client Unit Tests
+          path: client-server/build/test-results/test/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed Client unit reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: client-unit-test-reports
+          path: |
+            client-server/build/test-results/test/*.xml
+            client-server/build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  integration-tests:
+    name: Integration Tests
+    needs: unit-tests
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Run Client integration tests
+        run: ./gradlew :client-server:integrationTest --no-daemon
+
+      - name: Publish Client integration test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Client Integration Tests
+          path: client-server/build/test-results/integrationTest/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed Client integration reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: client-integration-test-reports
+          path: |
+            client-server/build/test-results/integrationTest/*.xml
+            client-server/build/reports/tests/integrationTest/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  playwright:
+    name: Playwright Mock Tests
+    needs: integration-tests
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: playwright/package-lock.json
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Install Playwright dependencies
+        run: npm --prefix playwright ci
+
+      - name: Install Chromium
+        run: npm --prefix playwright exec -- playwright install --with-deps chromium
+
+      - name: Build Client executable jar
+        run: ./gradlew :client-server:bootJar -Pversion=playwright --no-daemon
+
+      - name: Run Client Playwright mock tests
+        run: CI=true env -u NO_COLOR npm --prefix playwright run test:mock
+
+      - name: Publish Client Playwright mock test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Client Playwright Mock Tests
+          path: playwright/test-results/playwright-junit.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed Client Playwright reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: client-playwright-test-reports
+          path: |
+            playwright/test-results/playwright-junit.xml
+            playwright/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
