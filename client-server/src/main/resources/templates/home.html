@@ -2,27 +2,501 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
     <head>
         <meta charset="UTF-8">
-        <title>client-server APP</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Authenticated session | Dcrivella Auth</title>
+        <style>
+            :root {
+                color-scheme: light;
+                font-family:
+                    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    sans-serif;
+                color: #102a43;
+                background: #f4f7fb;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html {
+                min-width: 20rem;
+                min-height: 100%;
+            }
+
+            body {
+                min-height: 100vh;
+                margin: 0;
+                background:
+                    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34rem),
+                    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.1), transparent 30rem),
+                    #f4f7fb;
+            }
+
+            button {
+                font: inherit;
+            }
+
+            .page-shell {
+                width: min(100%, 120rem);
+                min-height: 100vh;
+                margin: 0 auto;
+                padding: clamp(0.9rem, 1.6vw, 1.6rem);
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr);
+                gap: clamp(0.8rem, 1.2vw, 1.25rem);
+            }
+
+            .page-header {
+                min-width: 0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                padding: 0 0.2rem;
+            }
+
+            .identity {
+                min-width: 0;
+                display: flex;
+                align-items: center;
+                gap: 0.9rem;
+            }
+
+            .brand-mark {
+                width: 2.7rem;
+                height: 2.7rem;
+                flex: 0 0 auto;
+                display: grid;
+                place-items: center;
+                border-radius: 0.9rem;
+                color: #fff;
+                background: linear-gradient(135deg, #2563eb, #0ea5e9);
+                box-shadow: 0 0.65rem 1.5rem rgba(37, 99, 235, 0.22);
+            }
+
+            .brand-mark svg {
+                width: 1.35rem;
+                height: 1.35rem;
+            }
+
+            .eyebrow {
+                margin: 0 0 0.15rem;
+                color: #627d98;
+                font-size: 0.7rem;
+                font-weight: 750;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+
+            h1,
+            h2,
+            p {
+                overflow-wrap: anywhere;
+            }
+
+            .page-header h1 {
+                margin: 0;
+                color: #102a43;
+                font-size: clamp(1.45rem, 2vw, 2rem);
+                line-height: 1.1;
+                letter-spacing: -0.03em;
+            }
+
+            .logout-form {
+                margin: 0;
+            }
+
+            .dashboard {
+                min-width: 0;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: clamp(0.75rem, 1vw, 1rem);
+            }
+
+            .card {
+                min-width: 0;
+                padding: clamp(1rem, 1.25vw, 1.4rem);
+                border: 1px solid rgba(148, 163, 184, 0.28);
+                border-radius: 1.15rem;
+                overflow: hidden;
+                background: rgba(255, 255, 255, 0.94);
+                box-shadow:
+                    0 1rem 2.5rem rgba(15, 23, 42, 0.08),
+                    0 0.2rem 0.7rem rgba(15, 23, 42, 0.04);
+                backdrop-filter: blur(0.7rem);
+            }
+
+            .token-card {
+                display: grid;
+                grid-template-rows: auto auto minmax(0, 1fr) auto;
+                gap: 0.9rem;
+            }
+
+            .card-heading {
+                min-width: 0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.75rem;
+            }
+
+            .card-heading h2 {
+                margin: 0;
+                color: #163a5f;
+                font-size: clamp(1.05rem, 1.2vw, 1.3rem);
+                line-height: 1.2;
+                letter-spacing: -0.015em;
+            }
+
+            .badge {
+                flex: 0 0 auto;
+                padding: 0.3rem 0.55rem;
+                border: 1px solid #bfdbfe;
+                border-radius: 999px;
+                color: #1d4ed8;
+                background: #eff6ff;
+                font-size: 0.68rem;
+                font-weight: 750;
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+
+            .field,
+            .claims-field {
+                min-width: 0;
+            }
+
+            .claims-field {
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .field-label {
+                margin: 0 0 0.35rem;
+                color: #627d98;
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.045em;
+                text-transform: uppercase;
+            }
+
+            .token-value,
+            .claims {
+                border: 1px solid #d9e2ec;
+                border-radius: 0.75rem;
+                color: #243b53;
+                background: #f8fafc;
+                font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+                font-size: clamp(0.64rem, 0.57rem + 0.08vw, 0.73rem);
+                line-height: 1.45;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            .token-value {
+                display: block;
+                max-height: 7rem;
+                padding: 0.65rem 0.75rem;
+                overflow: auto;
+                scrollbar-gutter: stable;
+            }
+
+            .token-value--compact {
+                max-height: 4.5rem;
+            }
+
+            .claims {
+                min-height: 5rem;
+                flex: 1 1 auto;
+                margin: 0;
+                padding: 0.65rem 0.75rem;
+                overflow: auto;
+                white-space: pre-wrap;
+                scrollbar-gutter: stable;
+            }
+
+            .tasks-card {
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .tasks-heading {
+                align-items: flex-start;
+            }
+
+            .button {
+                min-height: 2.55rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                padding: 0.65rem 0.9rem;
+                border: 0;
+                border-radius: 0.75rem;
+                cursor: pointer;
+                font-weight: 700;
+                transition:
+                    transform 160ms ease,
+                    box-shadow 160ms ease,
+                    opacity 160ms ease;
+            }
+
+            .button svg {
+                width: 1rem;
+                height: 1rem;
+            }
+
+            .button-primary {
+                color: #fff;
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                box-shadow: 0 0.55rem 1.25rem rgba(37, 99, 235, 0.2);
+            }
+
+            .button-secondary {
+                border: 1px solid #cbd5e1;
+                color: #334e68;
+                background: rgba(255, 255, 255, 0.8);
+            }
+
+            .button:hover:not(:disabled) {
+                transform: translateY(-1px);
+                box-shadow: 0 0.7rem 1.35rem rgba(15, 23, 42, 0.13);
+            }
+
+            .button:focus-visible {
+                outline: 0.2rem solid rgba(37, 99, 235, 0.28);
+                outline-offset: 0.2rem;
+            }
+
+            .button:disabled {
+                cursor: wait;
+                opacity: 0.62;
+            }
+
+            .refresh-status {
+                min-height: 1.25rem;
+                margin: 0.7rem 0 0.35rem;
+                color: #526d82;
+                font-size: 0.8rem;
+            }
+
+            .tasks-response {
+                min-height: 0;
+                flex: 1 1 auto;
+                padding: 0.85rem;
+                border: 1px solid #d9e2ec;
+                border-radius: 0.8rem;
+                overflow: auto;
+                color: #334e68;
+                background: #f8fafc;
+            }
+
+            .tasks-response h1,
+            .tasks-response h2 {
+                margin: 0 0 0.65rem;
+                color: #163a5f;
+                font-size: 1rem;
+                line-height: 1.3;
+            }
+
+            .tasks-response ol,
+            .tasks-response ul {
+                margin: 0;
+                padding-left: 1.35rem;
+            }
+
+            .tasks-response li + li {
+                margin-top: 0.35rem;
+            }
+
+            @media (min-width: 48rem) {
+                .dashboard {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .tasks-card {
+                    grid-column: 1 / -1;
+                }
+            }
+
+            @media (min-width: 75rem) {
+                .page-shell {
+                    height: 100vh;
+                    height: 100dvh;
+                }
+
+                .dashboard {
+                    min-height: 0;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+
+                .tasks-card {
+                    grid-column: auto;
+                }
+            }
+
+            @media (max-width: 47.99rem) {
+                .page-header {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+
+                .logout-form,
+                .logout-form .button {
+                    width: 100%;
+                }
+
+                .tasks-heading {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+
+                .tasks-heading .button {
+                    width: 100%;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .button {
+                    transition: none;
+                }
+            }
+        </style>
     </head>
     <body>
-        <h1 th:text="${userName} ?: 'User'">User</h1>
+        <main class="page-shell" aria-labelledby="page-title">
+            <header class="page-header">
+                <div class="identity">
+                    <div class="brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M12 3 5.5 5.8v5.1c0 4.3 2.6 8.2 6.5 10.1 3.9-1.9 6.5-5.8 6.5-10.1V5.8L12 3Z"/>
+                            <path d="m9.1 12 1.8 1.8 4-4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="eyebrow">Authenticated session</p>
+                        <h1 id="page-title" th:text="${userName} ?: 'User'">User</h1>
+                    </div>
+                </div>
 
-        <h2>Access Token: <span th:text="${accessTokenValue} ?: 'N/A'">N/A</span></h2>
-        <h2>Access Token Claims:</h2>
-        <pre th:text="${accessTokenClaimsJson} ?: 'N/A'">N/A</pre>
+                <form class="logout-form" th:action="@{/logout}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button class="button button-secondary" type="submit">Logout</button>
+                </form>
+            </header>
 
-        <h2>Refresh Token: <span th:text="${refreshTokenValue} ?: 'N/A'">N/A</span></h2>
+            <div class="dashboard">
+                <section class="card token-card" aria-labelledby="access-token-heading">
+                    <div class="card-heading">
+                        <div>
+                            <p class="eyebrow">OAuth 2.0</p>
+                            <h2 id="access-token-heading">Access token</h2>
+                        </div>
+                        <span class="badge">Bearer</span>
+                    </div>
 
-        <h2>Id Token: <span th:text="${idTokenValue} ?: 'N/A'">N/A</span></h2>
-        <h2>ID Token Claims:</h2>
-        <pre th:text="${claimsJson} ?: 'N/A'">N/A</pre>
+                    <div class="field">
+                        <p class="field-label">Token value</p>
+                        <code class="token-value"><span class="sensitive-value" th:text="${accessTokenValue} ?: 'N/A'">N/A</span></code>
+                    </div>
 
-        <h2>Tasks:</h2>
-        <div th:utext="${tasksResponse} ?: 'No tasks available'">No tasks available</div>
+                    <div class="claims-field">
+                        <p class="field-label">Claims</p>
+                        <pre class="claims" th:text="${accessTokenClaimsJson} ?: 'N/A'">N/A</pre>
+                    </div>
 
-        <form th:action="@{/logout}" method="post">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <button type="submit">Logout</button>
-        </form>
+                    <div class="field">
+                        <p class="field-label">Refresh token</p>
+                        <code class="token-value token-value--compact"><span class="sensitive-value" th:text="${refreshTokenValue} ?: 'N/A'">N/A</span></code>
+                    </div>
+                </section>
+
+                <section class="card token-card" aria-labelledby="id-token-heading">
+                    <div class="card-heading">
+                        <div>
+                            <p class="eyebrow">OpenID Connect</p>
+                            <h2 id="id-token-heading">ID token</h2>
+                        </div>
+                        <span class="badge">Identity</span>
+                    </div>
+
+                    <div class="field">
+                        <p class="field-label">Token value</p>
+                        <code class="token-value"><span class="sensitive-value" th:text="${idTokenValue} ?: 'N/A'">N/A</span></code>
+                    </div>
+
+                    <div class="claims-field">
+                        <p class="field-label">Claims</p>
+                        <pre class="claims" th:text="${claimsJson} ?: 'N/A'">N/A</pre>
+                    </div>
+                </section>
+
+                <section class="card tasks-card" aria-labelledby="tasks-heading">
+                    <div class="card-heading tasks-heading">
+                        <div>
+                            <p class="eyebrow">Resource server</p>
+                            <h2 id="tasks-heading">Tasks</h2>
+                        </div>
+                        <button
+                            class="button button-primary"
+                            id="refresh-tasks"
+                            type="button"
+                            data-refresh-url="/home/tasks"
+                            th:data-refresh-url="@{/home/tasks}"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M20 11a8 8 0 1 0-2.34 5.66"/>
+                                <path d="M20 4v7h-7"/>
+                            </svg>
+                            Refresh tasks
+                        </button>
+                    </div>
+                    <p class="refresh-status" id="tasks-refresh-status" role="status" aria-live="polite"></p>
+                    <div
+                        class="tasks-response"
+                        id="tasks-response"
+                        aria-live="polite"
+                        th:utext="${tasksResponse} ?: 'No tasks available'"
+                    >
+                        No tasks available
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <script>
+            (() => {
+                const refreshButton = document.querySelector("#refresh-tasks");
+                const tasksResponse = document.querySelector("#tasks-response");
+                const refreshStatus = document.querySelector("#tasks-refresh-status");
+
+                refreshButton.addEventListener("click", async () => {
+                    refreshButton.disabled = true;
+                    tasksResponse.setAttribute("aria-busy", "true");
+                    refreshStatus.textContent = "Refreshing tasks…";
+
+                    try {
+                        const response = await fetch(refreshButton.dataset.refreshUrl, {
+                            cache: "no-store",
+                            credentials: "same-origin",
+                            headers: { Accept: "text/html" },
+                        });
+                        if (!response.ok) {
+                            throw new Error("Task refresh failed");
+                        }
+
+                        tasksResponse.innerHTML = await response.text();
+                        refreshStatus.textContent = "Tasks refreshed.";
+                    } catch (_) {
+                        refreshStatus.textContent = "Tasks could not be refreshed. Please try again.";
+                    } finally {
+                        tasksResponse.removeAttribute("aria-busy");
+                        refreshButton.disabled = false;
+                    }
+                });
+            })();
+        </script>
     </body>
 </html>

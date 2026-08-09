@@ -13,8 +13,14 @@ out/
 build/
 **/build/
 **/bin/
+
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+### Playwright ###
+playwright/node_modules/
+playwright/playwright-report/
+playwright/test-results/
 
 ### VS Code ###
 .vscode/

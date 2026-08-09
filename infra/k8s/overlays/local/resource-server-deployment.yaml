@@ -16,7 +16,20 @@ spec:
       initContainers:
         - name: wait-for-auth-server
           image: busybox:1.36
-          command: ["sh", "-c", "until wget -q --spider http://auth-server:9000/.well-known/openid-configuration; do echo waiting for auth-server; sleep 2; done"]
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q --spider "${ISSUER_URL}/.well-known/openid-configuration"; do
+                echo "waiting for ${ISSUER_URL}"
+                sleep 2
+              done
+          env:
+            - name: ISSUER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ISSUER_URL
           resources:
             requests:
               cpu: 5m
@@ -26,7 +39,7 @@ spec:
               memory: 32Mi
       containers:
         - name: resource-server
-          image: dcrivella/resource-server:1.0.0
+          image: dcrivella/resource-server:1.0.0-native
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -41,6 +54,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ISSUER_URL
+            - name: JWK_SET_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: JWK_SET_URI
             - name: RESOURCE_AUDIENCE
               valueFrom:
                 configMapKeyRef:

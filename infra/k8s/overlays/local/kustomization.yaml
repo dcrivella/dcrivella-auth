@@ -5,7 +5,6 @@ namespace: dcrivella-auth
 
 resources:
   - namespace.yaml
-  - postgres.yaml
   - app-config.yaml
   - auth-server-service.yaml
   - auth-server-deployment.yaml
@@ -18,11 +17,3 @@ labels:
   - pairs:
       app.kubernetes.io/part-of: dcrivella-auth
       environment: local
-
-generatorOptions:
-  disableNameSuffixHash: true
-
-configMapGenerator:
-  - name: postgres-init
-    files:
-      - ../../../db/init/001-provision_auth.sql

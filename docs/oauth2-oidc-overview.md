@@ -212,6 +212,46 @@ User consent means the auth server asks the user to approve the scopes requested
 
 In this project, `client-server-pkce` is registered in the auth server with consent required. If the user does not approve `api.read`, the access token will not contain the `api.read` scope.
 
+### Where Consent Is Stored
+
+Authorization consent is state owned by the authorization server. It is not stored in the browser cookie, access token or refresh token. The useful mental model for one consent record is:
+
+```text
+resource-owner principal + registered OAuth client
+user                     + client-server-pkce
+```
+
+Spring Authorization Server uses the registered client's internal ID and the principal name as the actual key. When `user` approves every scope requested by `client-server-pkce`, the consent service remembers the grant of `openid`, `profile`, `api.read` and `offline_access` for that pair. A different user or a different OAuth client has a separate consent record.
+
+The bean in [AuthorizationServerConfig](../auth-server/src/main/java/cloud/dcrivella/authserver/AuthorizationServerConfig.java) is an `InMemoryOAuth2AuthorizationConsentService`. The record therefore exists only inside the current `auth-server` process.
+
+### Consent, Sessions And Token Expiration
+
+Logout and consent answer different questions. Logout ends the client session and the OIDC login session; it does not withdraw the scopes that the user previously granted. Access-token and refresh-token expiration control how long those credentials can be used, not how long consent is remembered.
+
+For `client-server-pkce`, access tokens last 5 minutes and refresh tokens last 60 minutes. Refresh tokens rotate because reuse is disabled. After a refresh token expires, the user may need to authenticate again, but the authorization server can still skip consent for scopes already granted.
+
+| Event | Does remembered consent remain? | Is consent requested again for the same scopes? |
+| --- | --- | --- |
+| OIDC logout | Yes | No, after the next authentication |
+| Close the browser and discard its session cookie | Yes | No, after the next authentication |
+| Use another browser as the same user | Yes | No, after authentication |
+| Access token expires | Yes | No |
+| Refresh token expires | Yes | Normally no, after authentication if required |
+| Request a scope not previously granted | Existing scopes remain; the new scope is missing | Yes, for the expanded request |
+| Sign in as another user | The original user's record remains, but the new user has a different record | Yes |
+| Restart or replace the `auth-server` process or pod | No, in this project | Yes |
+| Restart only `client-server` or `resource-server` | Yes | No |
+| Send `prompt=consent` | Yes | Yes, because the request forces the consent interaction |
+
+Because consent is in memory, any operation that really recreates the authorization-server process loses it. For example, `mise run k3d:bootstrap:fresh:jvm` recreates the cluster and the `auth-server` pod, so the next manual login asks again. A rollout or pod replacement has the same effect. Recreating only `client-server` or `resource-server` does not clear consent because neither owns the consent service.
+
+This is an intentional learning-project boundary, not a recommended production retention policy. A production authorization server normally uses persistent consent storage, where the grant survives process and pod replacement until the user, an administrator or an application policy revokes it.
+
+### Why Playwright Still Shows Consent Every Time
+
+The browser tests deliberately differ from the manual flow. They authenticate as the separate `playwright` user, send `prompt=consent`, and, against a real runtime, request the optional `playwright.consent` marker without granting it. The forced prompt and still-ungranted marker keep the consent screen repeatable, while the separate principal prevents test consent from changing the record for the manual `user` account. See [Testing Strategy](testing-strategy.md#browser-login-consent-tasks-and-logout) for the complete browser-test boundary.
+
 The `/tasks` endpoint requires:
 
 ```text

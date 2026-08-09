@@ -47,10 +47,22 @@ The `PBP_NATIVE_IMAGE` project property controls whether the image is native or 
 - `-PBP_NATIVE_IMAGE=true` builds a native image
 - `-PBP_NATIVE_IMAGE=false` builds a JVM image
 
-For local development, the common path is:
+The public image tags are explicit:
+
+- native: `dcrivella/<module>:1.0.0-native`
+- JVM: `dcrivella/<module>:1.0.0-jvm`
+
+For the fastest local development loop, use the JVM flow:
 
 ```zsh
-mise run compose:build-up
+mise run compose:build-up:jvm
 ```
 
-That builds the images and starts the Docker Compose stack.
+That builds JVM images and starts the Docker Compose stack. Use
+`mise run k3d:build-up:jvm` for the equivalent k3d flow. The unsuffixed
+`compose:build-up` and `k3d:build-up` commands remain the GraalVM native-image
+validation paths.
+
+Smoke and end-to-end commands are mode-independent. Run the existing
+`compose:smoke`/`compose:e2e` or `k3d:smoke`/`k3d:e2e` task against the active
+runtime.

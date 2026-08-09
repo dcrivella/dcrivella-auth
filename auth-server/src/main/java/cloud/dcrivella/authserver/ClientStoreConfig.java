@@ -14,13 +14,26 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import java.time.Duration;
 import java.util.UUID;
 
+/**
+ * Registers the OAuth clients used by the browser, Postman and machine-to-machine examples.
+ *
+ * @author Douglas Crivella
+ * @created August 8, 2026
+ */
 @Configuration
 public class ClientStoreConfig {
 
     private static final String POSTMAN_REDIRECT_URI = "https://oauth.pstmn.io/v1/callback";
     private static final String SCOPE_OFFLINE_ACCESS = "offline_access";
     private static final String SCOPE_API_READ = "api.read";
+    private static final String SCOPE_PLAYWRIGHT_CONSENT = "playwright.consent";
+    private static final String PLAYWRIGHT_DENIAL_REDIRECT_URI = "http://localhost:8080/login";
 
+    /**
+     * Creates the in-memory client registry with authorization code, PKCE and client credentials clients.
+     *
+     * @return the registered OAuth client repository
+     */
     @Bean
     protected RegisteredClientRepository registeredClientRepository() {
         // Web confidential client - keeps its secret
@@ -83,6 +96,7 @@ public class ClientStoreConfig {
                 .scope(OidcScopes.PROFILE) // allow profile claims such as name, given_name and family_name
                 .scope(SCOPE_OFFLINE_ACCESS) // allow issuing refresh tokens after user consent
                 .scope(SCOPE_API_READ) // allow calling the resource-server
+                .scope(SCOPE_PLAYWRIGHT_CONSENT) // keep real browser consent checks repeatable
                 .clientSettings(ClientSettings.builder() //
                         .requireAuthorizationConsent(true) //
                         .requireProofKey(true) // enforce PKCE
@@ -91,6 +105,19 @@ public class ClientStoreConfig {
                         .accessTokenTimeToLive(Duration.ofMinutes(5)) // default: 5m
                         .refreshTokenTimeToLive(Duration.ofMinutes(60)) // refresh token expires after 60 minutes
                         .reuseRefreshTokens(false) // issue a new refresh token on refresh and invalidate the old one
+                        .build()) //
+                .build();
+
+        RegisteredClient playwrightDenialClient = RegisteredClient.withId(UUID.randomUUID().toString()) //
+                .clientId("playwright-consent-denial") //
+                .clientAuthenticationMethod(ClientAuthenticationMethod.NONE) //
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) //
+                .redirectUri(PLAYWRIGHT_DENIAL_REDIRECT_URI) //
+                .scope(OidcScopes.OPENID) //
+                .scope(SCOPE_API_READ) //
+                .clientSettings(ClientSettings.builder() //
+                        .requireAuthorizationConsent(true) //
+                        .requireProofKey(true) //
                         .build()) //
                 .build();
 
@@ -106,6 +133,7 @@ public class ClientStoreConfig {
                         .build()) //
                 .build();
 
-        return new InMemoryRegisteredClientRepository(postmanConfidential, pkceClient, pkcePostmanClient, machineClient);
+        return new InMemoryRegisteredClientRepository(postmanConfidential, pkceClient, pkcePostmanClient, playwrightDenialClient,
+                machineClient);
     }
 }

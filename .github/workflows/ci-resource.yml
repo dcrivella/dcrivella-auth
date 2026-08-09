@@ -1,0 +1,117 @@
+name: Resource Server CI
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: Java version used by Resource Server CI
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  unit-and-architecture-tests:
+    name: Unit and Architecture Tests
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Run Resource unit and architecture tests
+        run: ./gradlew :resource-server:test --no-daemon
+
+      - name: Publish Resource unit test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Resource Unit Tests
+          path: resource-server/build/test-results/test/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Publish Resource architecture test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Resource Architecture Tests
+          path: resource-server/build/test-results/archTest/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed Resource unit and architecture reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: resource-unit-architecture-test-reports
+          path: |
+            resource-server/build/test-results/test/*.xml
+            resource-server/build/test-results/archTest/*.xml
+            resource-server/build/reports/tests/test/
+            resource-server/build/reports/tests/archTest/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  integration-tests:
+    name: Integration Tests
+    needs: unit-and-architecture-tests
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Run Resource integration tests
+        run: ./gradlew :resource-server:integrationTest --no-daemon
+
+      - name: Publish Resource integration test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Resource Integration Tests
+          path: resource-server/build/test-results/integrationTest/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed Resource integration reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: resource-integration-test-reports
+          path: |
+            resource-server/build/test-results/integrationTest/*.xml
+            resource-server/build/reports/tests/integrationTest/
+          if-no-files-found: ignore
+          retention-days: 7

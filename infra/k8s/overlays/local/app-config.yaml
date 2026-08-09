@@ -5,7 +5,8 @@ metadata:
   namespace: dcrivella-auth
 data:
   ISSUER_URL: http://host.k3d.internal:9000
+  JWK_SET_URI: http://auth-server:9000/oauth2/jwks
   RESOURCE_SERVER_API_URL: http://resource-server:8081
   AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_SERVER_PKCE_0: api://resource-server
+  AUTH_TOKEN_CLIENT_AUDIENCES_CLIENT_M2M_0: api://resource-server
   RESOURCE_AUDIENCE: api://resource-server
-  AUTH_DB_SCHEMA: auth

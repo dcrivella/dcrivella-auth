@@ -1,0 +1,468 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Dependency graph (visible job names with job IDs in parentheses):
+#
+# Detect Changes (changes)
+#   outputs: auth, client, resource, architecture and system_tests
+#   |
+# Repository Quality (repository-quality)
+#   +--> Cross-module Architecture Tests (architecture) ------------------+
+#   +--> Compile System Test Sources (system-test-classes) ----------------+
+#   +--> Auth Server (auth: Unit -> Integration) --------------------------+
+#   +--> Client Server (client: Unit -> Integration -> Playwright Mock) ---+
+#   +--> Resource Server (resource: Unit and Architecture -> Integration) -+
+#                                                                          |
+#                         System Tests - Docker Compose (JVM)              |
+#                              (compose-system-tests-jvm) <----------------+
+#                                           |
+#                                      CI Success
+#                                      (ci-success)
+#
+# CI Success aggregates Detect Changes, Repository Quality, every branch and the Docker Compose job.
+# Detect Changes is the only job that exports values. Every other job communicates
+# success or failure through needs.<job>.result and publishes reports when applicable.
+jobs:
+  # Inputs/Gate: Runs for every workflow invocation with no upstream dependency.
+  # Runs: Classifies changed paths into the five boolean outputs shown above.
+  # Result/Downstream: Exports values that gate the parallel branches and their final convergence.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      auth: ${{ steps.filter.outputs.auth }}
+      client: ${{ steps.filter.outputs.client }}
+      resource: ${{ steps.filter.outputs.resource }}
+      architecture: ${{ steps.filter.outputs.architecture }}
+      system_tests: ${{ steps.filter.outputs.system_tests }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Detect affected projects
+        id: filter
+        uses: dorny/paths-filter@v4.0.3
+        with:
+          filters: |
+            auth:
+              - 'auth-server/**'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - '.mise.toml'
+              - '.github/workflows/**'
+            client:
+              - 'client-server/**'
+              - 'playwright/global-setup.ts'
+              - 'playwright/package.json'
+              - 'playwright/package-lock.json'
+              - 'playwright/playwright.config.ts'
+              - 'playwright/scripts/**'
+              - 'playwright/tests/mock/**'
+              - 'playwright/tests/support/**'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - '.mise.toml'
+              - '.github/workflows/**'
+            resource:
+              - 'resource-server/**'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - '.mise.toml'
+              - '.github/workflows/**'
+            architecture:
+              - 'architecture-tests/**'
+              - 'auth-server/**'
+              - 'client-server/**'
+              - 'resource-server/**'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - '.mise.toml'
+              - '.github/workflows/**'
+            system_tests:
+              - 'system-tests/**'
+              - 'auth-server/**'
+              - 'client-server/**'
+              - 'resource-server/**'
+              - 'infra/compose/**'
+              - 'scripts/image-mode.sh'
+              - 'playwright/global-setup.ts'
+              - 'playwright/package.json'
+              - 'playwright/package-lock.json'
+              - 'playwright/playwright.config.ts'
+              - 'playwright/tests/real/**'
+              - 'playwright/tests/support/**'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - '.mise.toml'
+              - '.github/workflows/**'
+
+  # Inputs/Gate: Requires Detect Changes to succeed and is not path-filtered.
+  # Runs: Validates the Gradle wrapper, GitHub Actions workflows and repository formatting.
+  # Result/Downstream: Exports no values; its result gates every test branch.
+  repository-quality:
+    name: Repository Quality
+    needs: changes
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v6.3.0
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25.0.4'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - uses: jdx/mise-action@v4.2.4
+        with:
+          install_args: github:rhysd/actionlint
+          cache: true
+
+      - name: Validate GitHub Actions workflows
+        run: mise run lint:actions
+
+      - name: Check formatting
+        run: ./gradlew spotlessCheck --no-daemon
+
+  # Inputs/Gate: Requires Repository Quality and the architecture change output.
+  # Runs: Executes the cross-module architecture suite and publishes its JUnit report.
+  # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
+  architecture:
+    name: Cross-module Architecture Tests
+    needs: [changes, repository-quality]
+    if: ${{ needs.changes.outputs.architecture == 'true' }}
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25.0.4'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Run cross-module architecture tests
+        run: ./gradlew :architecture-tests:test --no-daemon
+
+      - name: Publish cross-module architecture test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Cross-module Architecture Tests
+          path: architecture-tests/build/test-results/test/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed cross-module architecture reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: cross-module-architecture-test-reports
+          path: |
+            architecture-tests/build/test-results/test/*.xml
+            architecture-tests/build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Inputs/Gate: Requires Repository Quality and the system_tests change output.
+  # Runs: Compiles system-test sources without starting or contacting a runtime.
+  # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
+  system-test-classes:
+    name: Compile System Test Sources
+    needs: [changes, repository-quality]
+    if: ${{ needs.changes.outputs.system_tests == 'true' }}
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25.0.4'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Compile system tests without running a runtime
+        run: ./gradlew :system-tests:systemTestClasses --no-daemon
+
+  # Inputs/Gate: Requires system_tests changes and successful or skipped upstream test branches.
+  # Runs: Creates an ephemeral JVM stack -> waits for Auth, Client and Resource -> preflight -> smoke ->
+  #   M2M E2E -> real Playwright E2E across all three applications -> reports and failure logs ->
+  #   always removes the stack.
+  # Result/Downstream: Exports no values; publishes real three-application reports and feeds CI Success.
+  compose-system-tests-jvm:
+    name: System Tests - Docker Compose (JVM)
+    needs: [changes, repository-quality, architecture, system-test-classes, auth, client, resource]
+    if: |
+      always() &&
+      needs.changes.result == 'success' &&
+      needs.changes.outputs.system_tests == 'true' &&
+      needs.repository-quality.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.architecture.result) &&
+      needs.system-test-classes.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.auth.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.client.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.resource.result)
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25.0.4'
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: playwright/package-lock.json
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - uses: jdx/mise-action@v4.2.4
+        with:
+          install: false
+          cache: true
+
+      - name: Install Playwright dependencies
+        run: npm --prefix playwright ci
+
+      - name: Install Chromium
+        run: npm --prefix playwright exec -- playwright install --with-deps chromium
+
+      - name: Map the public issuer hostname
+        run: echo "127.0.0.1 host.docker.internal" | sudo tee -a /etc/hosts
+
+      - name: Build and start the JVM Compose stack
+        run: mise run compose:build-up:jvm
+
+      - name: Wait for Compose HTTP endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          wait_for_http() {
+            local name="$1"
+            local url="$2"
+
+            for attempt in {1..60}; do
+              if curl --silent --output /dev/null --max-time 2 "${url}"; then
+                echo "${name} is reachable"
+                return 0
+              fi
+              sleep 2
+            done
+
+            echo "::error::${name} did not become reachable at ${url} after ${attempt} attempts"
+            return 1
+          }
+
+          wait_for_http "auth-server" "http://localhost:9000/.well-known/openid-configuration"
+          wait_for_http "client-server" "http://localhost:8080/"
+          wait_for_http "resource-server" "http://localhost:8081/tasks"
+
+      - name: Run system-test preflight
+        id: system_test_preflight
+        run: mise run compose:preflight -- --no-daemon
+
+      - name: Run smoke tests
+        run: >-
+          mise run compose:smoke --
+          --no-daemon
+          -x :system-tests:systemTestPreflight
+
+      - name: Run M2M end-to-end tests
+        run: >-
+          mise run compose:e2e --
+          --no-daemon
+          -x :system-tests:systemTestPreflight
+          -x :system-tests:smokeTest
+
+      - name: Run Docker Compose Playwright end-to-end tests
+        id: compose_playwright
+        run: CI=true mise run compose:playwright
+
+      - name: Publish Docker Compose system test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && steps.system_test_preflight.outcome != 'skipped' && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Docker Compose System Tests
+          path: system-tests/build/test-results/**/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Publish Docker Compose Playwright test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && steps.compose_playwright.outcome != 'skipped' && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: Docker Compose Playwright End-to-End Tests
+          path: playwright/test-results/playwright-junit.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed Docker Compose system test reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: docker-compose-system-test-reports
+          path: |
+            system-tests/build/test-results/
+            system-tests/build/reports/tests/
+            playwright/test-results/
+            playwright/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Show Docker Compose logs after failure
+        if: ${{ failure() }}
+        run: >-
+          docker compose --env-file infra/compose/.env
+          -f infra/compose/compose.yml
+          -f infra/compose/compose.override.yml
+          logs --no-color
+
+      - name: Stop and remove the Docker Compose stack
+        if: ${{ always() }}
+        run: mise run compose:down
+
+  # Inputs/Gate: Requires Repository Quality and the auth change output.
+  # Runs: Calls the Auth workflow where unit tests precede integration tests and reports are published.
+  # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
+  auth:
+    name: Auth Server
+    needs: [changes, repository-quality]
+    if: ${{ needs.changes.outputs.auth == 'true' }}
+    permissions:
+      contents: read
+      checks: write
+    uses: ./.github/workflows/ci-auth.yml
+    with:
+      java-version: '25.0.4'
+
+  # Inputs/Gate: Requires Repository Quality and the client change output.
+  # Runs: Calls Client unit -> integration -> Playwright Mock. The mock phase validates only the real Client
+  #   while Node simulates Auth and Resource; it does not validate either real server.
+  # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
+  client:
+    name: Client Server
+    needs: [changes, repository-quality]
+    if: ${{ needs.changes.outputs.client == 'true' }}
+    permissions:
+      contents: read
+      checks: write
+    uses: ./.github/workflows/ci-client.yml
+    with:
+      java-version: '25.0.4'
+      node-version: '24.19.0'
+
+  # Inputs/Gate: Requires Repository Quality and the resource change output.
+  # Runs: Calls Resource unit and architecture tests followed by integration tests and publishes reports.
+  # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
+  resource:
+    name: Resource Server
+    needs: [changes, repository-quality]
+    if: ${{ needs.changes.outputs.resource == 'true' }}
+    permissions:
+      contents: read
+      checks: write
+    uses: ./.github/workflows/ci-resource.yml
+    with:
+      java-version: '25.0.4'
+
+  # Inputs/Gate: Always evaluates after Detect Changes, Repository Quality and every optional test branch.
+  # Runs: Rejects failed required jobs while accepting success or skipped for path-filtered jobs.
+  # Result/Downstream: Exports no values; provides the single aggregate CI result.
+  ci-success:
+    name: CI Success
+    if: ${{ always() }}
+    needs:
+      - changes
+      - repository-quality
+      - architecture
+      - system-test-classes
+      - compose-system-tests-jvm
+      - auth
+      - client
+      - resource
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Verify required jobs
+        if: |
+          needs.changes.result != 'success' ||
+          needs.repository-quality.result != 'success' ||
+          !contains(fromJSON('["success", "skipped"]'), needs.architecture.result) ||
+          !contains(fromJSON('["success", "skipped"]'), needs.system-test-classes.result) ||
+          !contains(fromJSON('["success", "skipped"]'), needs.compose-system-tests-jvm.result) ||
+          !contains(fromJSON('["success", "skipped"]'), needs.auth.result) ||
+          !contains(fromJSON('["success", "skipped"]'), needs.client.result) ||
+          !contains(fromJSON('["success", "skipped"]'), needs.resource.result)
+        run: exit 1
+
+      - name: Confirm CI success
+        run: echo "All required CI jobs passed or were not affected."

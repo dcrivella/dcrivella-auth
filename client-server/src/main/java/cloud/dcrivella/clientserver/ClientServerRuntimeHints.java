@@ -13,8 +13,21 @@ import java.io.Writer;
 import java.lang.reflect.Method;
 import java.text.DateFormat;
 
+/**
+ * Registers the Jackson reflection metadata required by the client server native image.
+ *
+ * @author Douglas Crivella
+ * @created August 8, 2026
+ */
 class ClientServerRuntimeHints implements RuntimeHintsRegistrar {
 
+    /**
+     * Registers reflective Jackson builder and serialization methods used when rendering token claims.
+     *
+     * @param hints native runtime metadata registry
+     * @param classLoader application class loader supplied by Spring
+     * @throws IllegalStateException when a required Jackson method is unavailable
+     */
     @Override
     public void registerHints(@NonNull RuntimeHints hints, ClassLoader classLoader) {
         try {
@@ -30,6 +43,12 @@ class ClientServerRuntimeHints implements RuntimeHintsRegistrar {
         }
     }
 
+    /**
+     * Marks one reflected Jackson method as invokable in the native image.
+     *
+     * @param hints native runtime metadata registry
+     * @param method reflected method used by Jackson
+     */
     private static void register(RuntimeHints hints, Method method) {
         hints.reflection().registerMethod(method, ExecutableMode.INVOKE);
     }

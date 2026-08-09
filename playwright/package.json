@@ -1,0 +1,16 @@
+{
+  "name": "dcrivella-auth-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test:mock": "PLAYWRIGHT_NO_COPY_PROMPT=1 DCRIVELLA_PLAYWRIGHT_PROFILE=mock playwright test --project=mock",
+    "test:real": "PLAYWRIGHT_NO_COPY_PROMPT=1 DCRIVELLA_PLAYWRIGHT_PROFILE=real playwright test --project=real"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}

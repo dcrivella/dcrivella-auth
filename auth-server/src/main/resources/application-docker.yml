@@ -10,25 +10,7 @@ spring:
     name: auth-server
     version: "@projectVersion@"
 
-  datasource:
-    url: jdbc:postgresql://db:5432/auth_server
-    username: ${AUTH_DB_USER:auth_user}
-    password: ${AUTH_DB_PASSWORD:auth_pass}
-
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        default_schema: ${AUTH_DB_SCHEMA:auth}
-
-  flyway:
-    enabled: true
-    schemas: ${AUTH_DB_SCHEMA:auth}
-    locations: classpath:db/migration
-
 auth:
   token:
-    # No per-client audiences defined in Docker profile by default.
-    # Compose env provides mapping for client-server-pkce.
+    # Runtime-specific per-client audience mappings are supplied by Compose or Kubernetes.
     client-audiences: { }

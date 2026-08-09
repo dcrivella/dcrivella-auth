@@ -7,11 +7,26 @@ import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInit
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Protects the client home page with OpenID Connect login and provider-initiated logout.
+ *
+ * @author Douglas Crivella
+ * @created August 8, 2026
+ */
 @Configuration
 public class ClientSecurityConfig {
 
+    /**
+     * Configures public assets, OAuth login and OpenID Connect logout for the client server.
+     *
+     * @param http shared Spring Security builder
+     * @param clients registered OAuth client definitions
+     * @param loginFailureHandler safe OAuth login failure redirect handler
+     * @return the client server security filter chain
+     */
     @Bean
-    protected SecurityFilterChain client(HttpSecurity http, ClientRegistrationRepository clients) {
+    protected SecurityFilterChain client(HttpSecurity http, ClientRegistrationRepository clients,
+            OAuth2LoginFailureHandler loginFailureHandler) {
         // Redirect to AS end_session_endpoint with id_token_hint
         var oidcLogout = new OidcClientInitiatedLogoutSuccessHandler(clients);
         oidcLogout.setPostLogoutRedirectUri("{baseUrl}/"); // or /home
@@ -19,7 +34,7 @@ public class ClientSecurityConfig {
         http.authorizeHttpRequests(a -> a //
                 .requestMatchers("/", "/error", "/default-ui.css", "/favicon.ico", "/login**").permitAll() //
                 .anyRequest().authenticated()) //
-                .oauth2Login(o -> o.defaultSuccessUrl("/home", true)) //
+                .oauth2Login(o -> o.defaultSuccessUrl("/home", true).failureHandler(loginFailureHandler)) //
                 .logout(l -> l.logoutSuccessHandler(oidcLogout));
 
         return http.build();
