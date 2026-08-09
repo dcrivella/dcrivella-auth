@@ -314,6 +314,11 @@ runs the equivalent commands directly against a Compose stack that must already
 be active. See [Stack Commands](docs/stack-commands.md#github-actions-locally)
 for lifecycle guards and act's local-runner limitations.
 
+GitHub Actions also exposes a manual-only `k3d System Tests` workflow. It owns
+an ephemeral JVM k3d cluster, runs preflight, smoke, M2M and real browser E2E,
+publishes reports and diagnostics, then always deletes the cluster. This manual
+workflow is independent from the required pull-request `CI Success` check.
+
 Install the Chromium binary once with `mise run playwright:install`. Playwright
 1.62.1 is isolated under `playwright/`. Browser execution task names start with
 the selected runtime (`mock`, `compose` or `k3d`); `playwright:install` and

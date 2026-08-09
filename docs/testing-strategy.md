@@ -158,6 +158,8 @@ System tests run in three explicit stages: preflight checks URL syntax and reach
 
 GitHub Actions first compiles the system-test sources without a runtime. Its `System Tests (Docker Compose, JVM Images)` job then waits for every affected application workflow, builds and starts an ephemeral JVM Compose stack and exposes preflight, smoke, M2M E2E and real Playwright browser E2E as separate steps. The workflow owns that ephemeral lifecycle and always removes the stack; the Gradle and Playwright test tasks still never manage a runtime. Pull-request CI does not provision k3d.
 
+The separate `k3d System Tests` workflow is manual-only. It builds JVM images, creates an ephemeral k3d cluster, imports and deploys the images, runs the same preflight, smoke, M2M E2E and real Playwright browser E2E stages, and always deletes the cluster. It is intentionally independent from pull-request `CI Success` and must not be configured as a required status check.
+
 The faster `Client Server Tests (No Docker) / Playwright Mock Tests (Mock Services, No Docker)` job remains inside the client workflow and depends only on Client integration tests. It runs the production Client executable while Node simulates the authorization and resource servers. Changes to Auth or Resource do not make that mock job validate either real application; their real browser integration is covered by `System Tests (Docker Compose, JVM Images)` instead.
 
 `mise run ci:all` runs the same CI phases locally, including the three system-test stages through `ci:system`. It requires a Compose stack that is already running and neither starts nor stops it.

@@ -1,0 +1,151 @@
+name: k3d System Tests
+run-name: k3d system tests on ${{ github.ref_name }} by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k3d-system-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  k3d-system-tests:
+    name: k3d System Tests (Manual, JVM Images)
+    timeout-minutes: 90
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+    env:
+      K3D_CLUSTER_NAME: dcrivella-auth
+      K8S_NAMESPACE: dcrivella-auth
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-java@v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25.0.4'
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: playwright/package-lock.json
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+
+      - uses: jdx/mise-action@v4.2.4
+        with:
+          install: false
+          cache: true
+
+      - name: Install the k3d toolchain
+        run: mise install k3d kustomize kubectl
+
+      - name: Install Playwright dependencies
+        run: npm --prefix playwright ci
+
+      - name: Install Chromium
+        run: npm --prefix playwright exec -- playwright install --with-deps chromium
+
+      - name: Map the public issuer hostname
+        run: echo "127.0.0.1 host.k3d.internal" | sudo tee -a /etc/hosts
+
+      - name: Build and start the JVM k3d stack
+        run: mise run k3d:build-up:jvm
+
+      - name: Run system-test preflight (k3d)
+        id: system_test_preflight
+        run: mise run k3d:preflight -- --no-daemon
+
+      - name: Run smoke tests (k3d)
+        run: >-
+          mise run k3d:smoke --
+          --no-daemon
+          -x :system-tests:systemTestPreflight
+
+      - name: Run M2M E2E tests (k3d)
+        run: >-
+          mise run k3d:e2e --
+          --no-daemon
+          -x :system-tests:systemTestPreflight
+          -x :system-tests:smokeTest
+
+      - name: Run Playwright E2E tests (k3d)
+        id: k3d_playwright
+        run: CI=true mise run k3d:playwright
+
+      - name: Publish k3d system test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && steps.system_test_preflight.outcome != 'skipped' }}
+        with:
+          name: k3d System Tests
+          path: system-tests/build/test-results/**/*.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Publish k3d Playwright test results
+        uses: dorny/test-reporter@v3.0.0
+        if: ${{ !cancelled() && steps.k3d_playwright.outcome != 'skipped' }}
+        with:
+          name: k3d Playwright End-to-End Tests
+          path: playwright/test-results/playwright-junit.xml
+          reporter: java-junit
+          list-suites: all
+          list-tests: all
+          fail-on-error: true
+          fail-on-empty: true
+          use-actions-summary: true
+
+      - name: Upload failed k3d system test reports
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: k3d-system-test-reports
+          path: |
+            system-tests/build/test-results/
+            system-tests/build/reports/tests/
+            playwright/test-results/
+            playwright/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Show k3d diagnostics after failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          set +e
+          k3d cluster list
+          kubectl -n dcrivella-auth get deployments,pods,services -o wide
+          kubectl -n dcrivella-auth describe pods
+          kubectl -n dcrivella-auth logs --all-containers=true --max-log-requests=20 --prefix -l app
+
+      - name: Delete the ephemeral k3d cluster
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! command -v k3d >/dev/null 2>&1; then
+            echo "k3d was not installed; no cluster could have been created"
+            exit 0
+          fi
+
+          if ! cluster_list="$(k3d cluster list)"; then
+            echo "::error::Could not inspect k3d clusters during cleanup"
+            exit 1
+          fi
+
+          if awk -v name="dcrivella-auth" 'NR > 1 && $1 == name { found=1 } END { exit !found }' <<<"${cluster_list}"; then
+            mise run k3d:cluster-down
+          else
+            echo "k3d cluster dcrivella-auth is already absent"
+          fi
