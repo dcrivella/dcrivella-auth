@@ -14,7 +14,7 @@ mise run <task>
 - `mise run build` runs `./gradlew build`.
 - `mise run test` runs `./gradlew test`.
 - `mise run test:all` runs Gradle unit/integration/architecture tests and the local runtime automation tests.
-- `mise run test:scripts` runs six local, non-destructive shell test harnesses with stubbed external commands; it does not modify a real Compose or k3d runtime and is not run by GitHub Actions.
+- `mise run test:scripts` runs seven local, non-destructive shell test harnesses with 55 stubbed scenarios; it does not modify a real Compose or k3d runtime and is not run by GitHub Actions.
 - `mise run ci:system` runs preflight, smoke, M2M and browser end-to-end tests against an already-running Compose stack.
 - `mise run ci:all` mirrors all GitHub Actions CI phases, including `ci:system`; it requires an already-running Compose stack but does not manage its lifecycle or include `test:scripts`.
 - `mise run clean` runs `./gradlew clean`.
@@ -23,13 +23,50 @@ mise run <task>
 - `mise run dev:auth`, `dev:client` and `dev:resource` run each module with `bootRun`.
 
 The Gradle wrapper remains the source of truth for the Gradle version; mise
-manages Java 25, Node 24.19.0, k3d, standalone Kustomize and kubectl but does
-not install Gradle separately.
+manages act 0.2.89, Java 25, Node 24.19.0, k3d, standalone Kustomize and kubectl
+but does not install Gradle separately.
 
 `gradle.properties` enables the configuration cache with incompatibilities set
 to fail. It also pins the Kotlin compiler's embedded idempotence-check rate to
 its documented default (`1000`) so equivalent Gradle invocations can reuse the
 same cache entry across daemons.
+
+## GitHub Actions Locally
+
+The act tasks use the repository's real `.github/workflows/ci.yml` rather than
+maintaining a second local CI implementation:
+
+- `mise run actions:list` lists the workflow jobs.
+- `mise run actions:graph` prints their dependency graph.
+- `mise run actions:dry-run` validates a complete forced dispatch without creating job containers.
+- `mise run actions:job <job-id>` runs one selected job and its required dependencies.
+- `mise run actions:all` runs the complete workflow, including reusable workflows, Playwright mock tests and the JVM Compose system-test job.
+
+All five commands use a `workflow_dispatch` event with `force_all=true`, so the
+five path-filter outputs are enabled even when relevant edits have not been
+committed. Pull requests and pushes do not use that override: their gates still
+come exclusively from `dorny/paths-filter`.
+
+`.actrc` fixes the `ubuntu-24.04` runner image, uses the Linux host network,
+removes failed job containers and stores uploaded artifacts under
+`.act/artifacts/`. The wrapper removes `GITHUB_TOKEN` before invoking act, so
+reporters cannot create GitHub Checks; workflow artifacts stay local and the
+entire `.act/` directory is ignored by Git.
+
+`mise run ci:all` and `mise run actions:all` have different lifecycle
+contracts. `ci:all` reproduces the CI commands directly and expects a Compose
+stack that is already running; it never starts or removes that runtime.
+`actions:all` executes the actual workflow YAML, which builds JVM images,
+creates its own ephemeral `dcrivella-auth-stack`, runs preflight, smoke, M2M
+and real browser tests, then removes only that stack. The wrapper refuses to
+start if the fixed Compose project already has containers or if the
+`dcrivella-auth` k3d cluster is active. It validates Docker and Compose before
+the run, always calls `down --remove-orphans` after success, failure or an
+interrupt, and preserves images, build caches and the act exit status.
+
+act closely approximates a GitHub-hosted runner, but it does not reproduce the
+GitHub Actions web UI or publish GitHub Checks. This local mode is supported on
+Linux with Docker Engine and host networking.
 
 ## Browser OAuth Tests
 

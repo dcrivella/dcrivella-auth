@@ -1,0 +1,5 @@
+-W .github/workflows/ci.yml
+-P ubuntu-24.04=catthehacker/ubuntu:act-24.04
+--network host
+--rm
+--artifact-server-path .act/artifacts

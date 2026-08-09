@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (No Docker)
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     permissions:
@@ -33,14 +33,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run Client unit tests
+      - name: Run Client unit tests (No Docker)
         run: ./gradlew :client-server:test --no-daemon
 
-      - name: Publish Client unit test results
+      - name: Publish Client unit test results (No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Client Unit Tests
+          name: Client Unit Tests (No Docker)
           path: client-server/build/test-results/test/*.xml
           reporter: java-junit
           list-suites: all
@@ -49,7 +49,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed Client unit reports
+      - name: Upload failed Client unit reports (No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:
@@ -61,7 +61,7 @@ jobs:
           retention-days: 7
 
   integration-tests:
-    name: Integration Tests
+    name: Integration Tests (Spring + JDK HTTP Stub, No Docker)
     needs: unit-tests
     timeout-minutes: 30
     runs-on: ubuntu-24.04
@@ -78,14 +78,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run Client integration tests
+      - name: Run Client integration tests (Spring + JDK HTTP Stub, No Docker)
         run: ./gradlew :client-server:integrationTest --no-daemon
 
-      - name: Publish Client integration test results
+      - name: Publish Client integration test results (Spring + JDK HTTP Stub, No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Client Integration Tests
+          name: Client Integration Tests (Spring + JDK HTTP Stub, No Docker)
           path: client-server/build/test-results/integrationTest/*.xml
           reporter: java-junit
           list-suites: all
@@ -94,7 +94,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed Client integration reports
+      - name: Upload failed Client integration reports (Spring + JDK HTTP Stub, No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:
@@ -106,7 +106,7 @@ jobs:
           retention-days: 7
 
   playwright:
-    name: Playwright Mock Tests
+    name: Playwright Mock Tests (Mock Services, No Docker)
     needs: integration-tests
     timeout-minutes: 30
     runs-on: ubuntu-24.04
@@ -129,23 +129,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Install Playwright dependencies
+      - name: Install Playwright dependencies (Mock Services, No Docker)
         run: npm --prefix playwright ci
 
-      - name: Install Chromium
+      - name: Install Chromium (Mock Services, No Docker)
         run: npm --prefix playwright exec -- playwright install --with-deps chromium
 
-      - name: Build Client executable jar
+      - name: Build Client executable jar (Mock Services, No Docker)
         run: ./gradlew :client-server:bootJar -Pversion=playwright --no-daemon
 
-      - name: Run Client Playwright mock tests
+      - name: Run Client Playwright mock tests (Mock Services, No Docker)
         run: CI=true env -u NO_COLOR npm --prefix playwright run test:mock
 
-      - name: Publish Client Playwright mock test results
+      - name: Publish Client Playwright mock test results (Mock Services, No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Client Playwright Mock Tests
+          name: Client Playwright Mock Tests (Mock Services, No Docker)
           path: playwright/test-results/playwright-junit.xml
           reporter: java-junit
           list-suites: all
@@ -154,7 +154,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed Client Playwright reports
+      - name: Upload failed Client Playwright reports (Mock Services, No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:

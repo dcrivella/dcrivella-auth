@@ -55,8 +55,8 @@ mise tasks
 ```
 
 The project configuration tracks the current Temurin Java 25 patch and pins
-Node 24.19.0, k3d, standalone Kustomize and kubectl. Gradle is not installed by
-mise because the repository uses its root wrapper (`./gradlew`).
+act 0.2.89, Node 24.19.0, k3d, standalone Kustomize and kubectl. Gradle is not
+installed by mise because the repository uses its root wrapper (`./gradlew`).
 
 The Gradle configuration cache is enabled in strict mode. The project pins the
 embedded Kotlin/IntelliJ idempotence-check rate to its documented default so
@@ -305,6 +305,14 @@ mise run compose:playwright:ui   # same Compose scenarios in Playwright UI
 mise run k3d:playwright          # k3d browser scenarios, headless
 mise run k3d:playwright:ui       # same k3d scenarios in Playwright UI
 ```
+
+Run `mise run actions:list`, `actions:graph` or `actions:dry-run` to inspect the
+real GitHub Actions workflow locally. `mise run actions:job <job-id>` selects a
+job, while `mise run actions:all` executes every forced branch and owns an
+ephemeral JVM Compose stack. Unlike that act-backed flow, `mise run ci:all`
+runs the equivalent commands directly against a Compose stack that must already
+be active. See [Stack Commands](docs/stack-commands.md#github-actions-locally)
+for lifecycle guards and act's local-runner limitations.
 
 Install the Chromium binary once with `mise run playwright:install`. Playwright
 1.62.1 is isolated under `playwright/`. Browser execution task names start with

@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   unit-and-architecture-tests:
-    name: Unit and Architecture Tests
+    name: Unit and Architecture Tests (No Docker)
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     permissions:
@@ -29,14 +29,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run Resource unit and architecture tests
+      - name: Run Resource unit and architecture tests (No Docker)
         run: ./gradlew :resource-server:test --no-daemon
 
-      - name: Publish Resource unit test results
+      - name: Publish Resource unit test results (No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Resource Unit Tests
+          name: Resource Unit Tests (No Docker)
           path: resource-server/build/test-results/test/*.xml
           reporter: java-junit
           list-suites: all
@@ -45,11 +45,11 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Publish Resource architecture test results
+      - name: Publish Resource architecture test results (No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Resource Architecture Tests
+          name: Resource Architecture Tests (No Docker)
           path: resource-server/build/test-results/archTest/*.xml
           reporter: java-junit
           list-suites: all
@@ -58,7 +58,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed Resource unit and architecture reports
+      - name: Upload failed Resource unit and architecture reports (No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:
@@ -72,7 +72,7 @@ jobs:
           retention-days: 7
 
   integration-tests:
-    name: Integration Tests
+    name: Integration Tests (Spring + Mock OAuth, No Docker)
     needs: unit-and-architecture-tests
     timeout-minutes: 30
     runs-on: ubuntu-24.04
@@ -89,14 +89,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run Resource integration tests
+      - name: Run Resource integration tests (Spring + Mock OAuth, No Docker)
         run: ./gradlew :resource-server:integrationTest --no-daemon
 
-      - name: Publish Resource integration test results
+      - name: Publish Resource integration test results (Spring + Mock OAuth, No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Resource Integration Tests
+          name: Resource Integration Tests (Spring + Mock OAuth, No Docker)
           path: resource-server/build/test-results/integrationTest/*.xml
           reporter: java-junit
           list-suites: all
@@ -105,7 +105,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed Resource integration reports
+      - name: Upload failed Resource integration reports (Spring + Mock OAuth, No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:

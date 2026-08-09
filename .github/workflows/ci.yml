@@ -1,6 +1,13 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: Run every path-filtered CI branch
+        required: false
+        default: false
+        type: boolean
   pull_request:
   push:
     branches: [main]
@@ -18,24 +25,24 @@ concurrency:
 #   outputs: auth, client, resource, architecture and system_tests
 #   |
 # Repository Quality (repository-quality)
-#   +--> Cross-module Architecture Tests (architecture) ------------------+
-#   +--> Compile System Test Sources (system-test-classes) ----------------+
-#   +--> Auth Server (auth: Unit -> Integration) --------------------------+
-#   +--> Client Server (client: Unit -> Integration -> Playwright Mock) ---+
-#   +--> Resource Server (resource: Unit and Architecture -> Integration) -+
-#                                                                          |
-#                         System Tests - Docker Compose (JVM)              |
-#                              (compose-system-tests-jvm) <----------------+
-#                                           |
-#                                      CI Success
-#                                      (ci-success)
+#   +--> Cross-module Architecture Tests (Static, No Docker) (architecture)
+#   +--> Compile System Test Sources (Compile Only, No Runtime) (system-test-classes)
+#   +--> Auth Server Tests (No Docker) (auth)
+#   |      Unit Tests (No Docker) -> Integration Tests (In-Process Spring Boot, No Docker)
+#   +--> Client Server Tests (No Docker) (client)
+#   |      Unit Tests (No Docker) -> Integration Tests (Spring + JDK HTTP Stub, No Docker)
+#   |        -> Playwright Mock Tests (Mock Services, No Docker)
+#   +--> Resource Server Tests (No Docker) (resource)
+#   |      Unit and Architecture Tests (No Docker) -> Integration Tests (Spring + Mock OAuth, No Docker)
 #
-# CI Success aggregates Detect Changes, Repository Quality, every branch and the Docker Compose job.
+# The five parallel branches converge on System Tests (Docker Compose, JVM Images)
+# (compose-system-tests-jvm). CI Success (ci-success) aggregates Detect Changes,
+# Repository Quality, every branch and the Docker Compose job.
 # Detect Changes is the only job that exports values. Every other job communicates
 # success or failure through needs.<job>.result and publishes reports when applicable.
 jobs:
   # Inputs/Gate: Runs for every workflow invocation with no upstream dependency.
-  # Runs: Classifies changed paths into the five boolean outputs shown above.
+  # Runs: Classifies changed paths or forces all five outputs for an explicit full dispatch.
   # Result/Downstream: Exports values that gate the parallel branches and their final convergence.
   changes:
     name: Detect Changes
@@ -44,16 +51,17 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      auth: ${{ steps.filter.outputs.auth }}
-      client: ${{ steps.filter.outputs.client }}
-      resource: ${{ steps.filter.outputs.resource }}
-      architecture: ${{ steps.filter.outputs.architecture }}
-      system_tests: ${{ steps.filter.outputs.system_tests }}
+      auth: ${{ github.event_name == 'workflow_dispatch' && inputs.force_all && 'true' || steps.resolve.outputs.auth }}
+      client: ${{ github.event_name == 'workflow_dispatch' && inputs.force_all && 'true' || steps.resolve.outputs.client }}
+      resource: ${{ github.event_name == 'workflow_dispatch' && inputs.force_all && 'true' || steps.resolve.outputs.resource }}
+      architecture: ${{ github.event_name == 'workflow_dispatch' && inputs.force_all && 'true' || steps.resolve.outputs.architecture }}
+      system_tests: ${{ github.event_name == 'workflow_dispatch' && inputs.force_all && 'true' || steps.resolve.outputs.system_tests }}
     steps:
       - uses: actions/checkout@v7.0.1
 
       - name: Detect affected projects
         id: filter
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.force_all }}
         uses: dorny/paths-filter@v4.0.3
         with:
           filters: |
@@ -129,6 +137,35 @@ jobs:
               - '.mise.toml'
               - '.github/workflows/**'
 
+      - name: Resolve change gates
+        id: resolve
+        shell: bash
+        env:
+          FORCE_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.force_all }}
+          AUTH_CHANGED: ${{ steps.filter.outputs.auth }}
+          CLIENT_CHANGED: ${{ steps.filter.outputs.client }}
+          RESOURCE_CHANGED: ${{ steps.filter.outputs.resource }}
+          ARCHITECTURE_CHANGED: ${{ steps.filter.outputs.architecture }}
+          SYSTEM_TESTS_CHANGED: ${{ steps.filter.outputs.system_tests }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${FORCE_ALL}" == "true" ]]; then
+            printf '%s\n' \
+              'auth=true' \
+              'client=true' \
+              'resource=true' \
+              'architecture=true' \
+              'system_tests=true' >> "${GITHUB_OUTPUT}"
+          else
+            printf '%s\n' \
+              "auth=${AUTH_CHANGED}" \
+              "client=${CLIENT_CHANGED}" \
+              "resource=${RESOURCE_CHANGED}" \
+              "architecture=${ARCHITECTURE_CHANGED}" \
+              "system_tests=${SYSTEM_TESTS_CHANGED}" >> "${GITHUB_OUTPUT}"
+          fi
+
   # Inputs/Gate: Requires Detect Changes to succeed and is not path-filtered.
   # Runs: Validates the Gradle wrapper, GitHub Actions workflows and repository formatting.
   # Result/Downstream: Exports no values; its result gates every test branch.
@@ -167,7 +204,7 @@ jobs:
   # Runs: Executes the cross-module architecture suite and publishes its JUnit report.
   # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
   architecture:
-    name: Cross-module Architecture Tests
+    name: Cross-module Architecture Tests (Static, No Docker)
     needs: [changes, repository-quality]
     if: ${{ needs.changes.outputs.architecture == 'true' }}
     timeout-minutes: 20
@@ -185,14 +222,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run cross-module architecture tests
+      - name: Run cross-module architecture tests (Static, No Docker)
         run: ./gradlew :architecture-tests:test --no-daemon
 
-      - name: Publish cross-module architecture test results
+      - name: Publish cross-module architecture test results (Static, No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Cross-module Architecture Tests
+          name: Cross-module Architecture Tests (Static, No Docker)
           path: architecture-tests/build/test-results/test/*.xml
           reporter: java-junit
           list-suites: all
@@ -201,7 +238,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed cross-module architecture reports
+      - name: Upload failed cross-module architecture reports (Static, No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:
@@ -216,7 +253,7 @@ jobs:
   # Runs: Compiles system-test sources without starting or contacting a runtime.
   # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
   system-test-classes:
-    name: Compile System Test Sources
+    name: Compile System Test Sources (Compile Only, No Runtime)
     needs: [changes, repository-quality]
     if: ${{ needs.changes.outputs.system_tests == 'true' }}
     timeout-minutes: 20
@@ -233,7 +270,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Compile system tests without running a runtime
+      - name: Compile system test sources (Compile Only, No Runtime)
         run: ./gradlew :system-tests:systemTestClasses --no-daemon
 
   # Inputs/Gate: Requires system_tests changes and successful or skipped upstream test branches.
@@ -242,7 +279,7 @@ jobs:
   #   always removes the stack.
   # Result/Downstream: Exports no values; publishes real three-application reports and feeds CI Success.
   compose-system-tests-jvm:
-    name: System Tests - Docker Compose (JVM)
+    name: System Tests (Docker Compose, JVM Images)
     needs: [changes, repository-quality, architecture, system-test-classes, auth, client, resource]
     if: |
       always() &&
@@ -317,24 +354,24 @@ jobs:
           wait_for_http "client-server" "http://localhost:8080/"
           wait_for_http "resource-server" "http://localhost:8081/tasks"
 
-      - name: Run system-test preflight
+      - name: Run system-test preflight (Docker Compose)
         id: system_test_preflight
         run: mise run compose:preflight -- --no-daemon
 
-      - name: Run smoke tests
+      - name: Run smoke tests (Docker Compose)
         run: >-
           mise run compose:smoke --
           --no-daemon
           -x :system-tests:systemTestPreflight
 
-      - name: Run M2M end-to-end tests
+      - name: Run M2M E2E tests (Docker Compose)
         run: >-
           mise run compose:e2e --
           --no-daemon
           -x :system-tests:systemTestPreflight
           -x :system-tests:smokeTest
 
-      - name: Run Docker Compose Playwright end-to-end tests
+      - name: Run Playwright E2E tests (Docker Compose)
         id: compose_playwright
         run: CI=true mise run compose:playwright
 
@@ -393,7 +430,7 @@ jobs:
   # Runs: Calls the Auth workflow where unit tests precede integration tests and reports are published.
   # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
   auth:
-    name: Auth Server
+    name: Auth Server Tests (No Docker)
     needs: [changes, repository-quality]
     if: ${{ needs.changes.outputs.auth == 'true' }}
     permissions:
@@ -408,7 +445,7 @@ jobs:
   #   while Node simulates Auth and Resource; it does not validate either real server.
   # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
   client:
-    name: Client Server
+    name: Client Server Tests (No Docker)
     needs: [changes, repository-quality]
     if: ${{ needs.changes.outputs.client == 'true' }}
     permissions:
@@ -423,7 +460,7 @@ jobs:
   # Runs: Calls Resource unit and architecture tests followed by integration tests and publishes reports.
   # Result/Downstream: Exports no values; its result gates Docker Compose system tests and CI Success.
   resource:
-    name: Resource Server
+    name: Resource Server Tests (No Docker)
     needs: [changes, repository-quality]
     if: ${{ needs.changes.outputs.resource == 'true' }}
     permissions:

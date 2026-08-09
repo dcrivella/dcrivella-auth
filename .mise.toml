@@ -2,6 +2,7 @@
 # Usage: mise install; mise tasks; mise run <task>
 
 [tools]
+act = "0.2.89"
 java = "temurin-25"
 k3d = "5.9.0"
 kustomize = "5.8.1"
@@ -45,6 +46,7 @@ bash scripts/tests/k3d-deploy-test.sh
 bash scripts/tests/compose-bootstrap-fresh-test.sh
 bash scripts/tests/k3d-bootstrap-fresh-test.sh
 bash scripts/tests/nuke-test.sh
+bash scripts/tests/actions-test.sh
 '''
 
 [tasks.coverage]
@@ -118,6 +120,28 @@ mise run playwright:install
 CI=true mise run mock:playwright
 mise run ci:system
 '''
+
+# GitHub Actions
+
+[tasks."actions:list"]
+description = "List jobs from the real CI workflow with act"
+run = "scripts/actions.sh list"
+
+[tasks."actions:graph"]
+description = "Display the real CI workflow dependency graph with act"
+run = "scripts/actions.sh graph"
+
+[tasks."actions:dry-run"]
+description = "Validate a forced full CI workflow_dispatch without creating containers"
+run = "scripts/actions.sh dry-run"
+
+[tasks."actions:job"]
+description = "Run one job from the real CI workflow with act"
+run = "scripts/actions.sh job"
+
+[tasks."actions:all"]
+description = "Run the real CI workflow locally with an ephemeral JVM Compose stack"
+run = "scripts/actions.sh all"
 
 # Browser flows
 

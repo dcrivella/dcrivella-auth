@@ -8,17 +8,19 @@ A unit test mocks an outgoing port because it validates one class. A web slice m
 
 ## Executable taxonomy
 
-| Level | Command | Mocked or simulated | Real |
-| --- | --- | --- | --- |
-| Unit | `mise run test` | Outgoing ports and repositories | Class under test |
-| Web slice | `mise run test` | Service called by the controller | MVC mapping and Spring Security |
-| Integration | `mise run test:integration` | External HTTP systems only | Spring context and production adapters |
-| Architecture | `./gradlew :resource-server:archTest :architecture-tests:test` | Nothing | Static dependency analysis |
-| Mutation analysis | `mise run test:mutation` | The boundaries already declared by selected tests | PIT changes production behavior to measure test strength |
-| Browser OAuth mock | `mise run mock:playwright` or `mise run mock:playwright:ui` | Authorization server and resource server HTTP systems | Chromium, the production client server, PKCE, callback/session handling and logout handler |
-| Smoke | `mise run compose:smoke` or `mise run k3d:smoke` | Nothing | Essential availability and security checks against an active runtime |
-| M2M end to end | `mise run compose:e2e` or `mise run k3d:e2e` | Nothing | Cucumber feature with real token issuance and protected API call |
-| Browser OAuth end to end | `mise run compose:playwright`, `mise run compose:playwright:ui`, `mise run k3d:playwright` or `mise run k3d:playwright:ui` | Nothing | Chromium crosses the three applications in an already-running stack |
+| Level | Command | Runtime / ownership | Mocked or simulated | Real |
+| --- | --- | --- | --- | --- |
+| Unit | `mise run test` | Gradle/JUnit owns the test JVM; no Docker | Outgoing ports and repositories | Class under test |
+| Web slice | `mise run test` | Gradle/Spring owns the in-process test context; no Docker | Service called by the controller | MVC mapping and Spring Security |
+| Integration | `mise run test:integration` | The module test owns its in-process Spring/JVM environment and controlled stubs; no Docker | External HTTP systems only | Spring context and production adapters |
+| Architecture | `./gradlew :resource-server:archTest :architecture-tests:test` | Gradle performs static analysis; no application runtime or Docker | Nothing | Static dependency analysis |
+| Mutation analysis | `mise run test:mutation` | PIT owns forked test JVMs; no Docker | The boundaries already declared by selected tests | PIT changes production behavior to measure test strength |
+| Browser OAuth mock | `mise run mock:playwright` or `mise run mock:playwright:ui` | Playwright owns the client JVM and Node mock services; no Docker | Authorization server and resource server HTTP systems | Chromium, the production client server, PKCE, callback/session handling and logout handler |
+| Smoke | `mise run compose:smoke` or `mise run k3d:smoke` | Local tasks target an existing Compose or k3d runtime; GitHub Actions owns its ephemeral Compose stack | Nothing | Essential availability and security checks against an active runtime |
+| M2M end to end | `mise run compose:e2e` or `mise run k3d:e2e` | Local tasks target an existing Compose or k3d runtime; GitHub Actions owns its ephemeral Compose stack | Nothing | Cucumber feature with real token issuance and protected API call |
+| Browser OAuth end to end | `mise run compose:playwright`, `mise run compose:playwright:ui`, `mise run k3d:playwright` or `mise run k3d:playwright:ui` | Local tasks target an existing Compose or k3d runtime; GitHub Actions owns its ephemeral Compose stack | Nothing | Chromium crosses the three applications in an already-running stack |
+
+No current test uses Testcontainers. Module integration tests create and own their in-process Spring/JVM test environment and any controlled HTTP stub they need; they do not ask Docker to provision dependencies. Smoke and end-to-end tests instead target real application processes in Compose or k3d.
 
 `mise run test` remains the fast flow. The root Gradle `test` selector runs the global `architecture-tests:test` task because it is the standard test task of that module, and `resource-server:test` finalizes with its module-specific `archTest`. Both architecture suites are static and do not require Docker.
 
@@ -134,7 +136,7 @@ There is no database adapter in the current domain. Adding a disposable database
 
 ## Integration, smoke, and end-to-end boundaries
 
-An integration test starts and owns one application. Its Spring components and adapters are real, while external HTTP systems may be simulated.
+A module integration test owns its in-process Spring/JVM test environment. Its Spring components and production adapters are real, while controlled stubs replace only external HTTP systems where needed. It does not contact Docker or an already-running application.
 
 A smoke test does not own the runtime. It verifies a focused set of core black-box capabilities:
 
@@ -142,7 +144,9 @@ A smoke test does not own the runtime. It verifies a focused set of core black-b
 - the protected client page redirects to OAuth login;
 - `/tasks` returns `401` without a Bearer token.
 
-An end-to-end test treats the whole active stack as a black box. No application component is replaced: the test exercises the complete M2M path across the real authorization and resource server processes:
+An end-to-end test treats the whole active stack as a black box. `E2E` describes that deployment boundary; `M2M` and `browser` identify two different actors and OAuth flows within it. The Cucumber M2M E2E suite uses the non-interactive `client_credentials` grant across the real authorization and resource servers, so it deliberately does not involve a browser, user, consent, client-server session or logout. The Playwright browser E2E suite uses authorization code with PKCE and crosses the browser plus all three applications to cover those interactive behaviors. Smoke is not a third E2E flow: it samples separate core endpoints without completing either cross-service journey.
+
+The M2M E2E flow:
 
 1. request a real `client_credentials` token;
 2. inspect `iss`, `sub`, `aud`, and `scope`;
@@ -152,9 +156,9 @@ An end-to-end test treats the whole active stack as a black box. No application 
 
 System tests run in three explicit stages: preflight checks URL syntax and reachability, smoke verifies the core runtime capabilities, and E2E crosses the complete M2M flow. The E2E Gradle task depends on the earlier stages. Compose and k3d tasks pass public URLs and the advertised issuer as Gradle properties. No stage builds, starts, stops, seeds, or deletes either runtime; the configured OAuth clients and three tasks are already part of the applications.
 
-GitHub Actions first compiles the system-test sources without a runtime. Its `System Tests - Docker Compose (JVM)` job then waits for every affected application workflow, builds and starts an ephemeral JVM Compose stack and exposes preflight, smoke, M2M E2E and real Playwright browser E2E as separate steps. The workflow owns that ephemeral lifecycle and always removes the stack; the Gradle and Playwright test tasks still never manage a runtime. Pull-request CI does not provision k3d.
+GitHub Actions first compiles the system-test sources without a runtime. Its `System Tests (Docker Compose, JVM Images)` job then waits for every affected application workflow, builds and starts an ephemeral JVM Compose stack and exposes preflight, smoke, M2M E2E and real Playwright browser E2E as separate steps. The workflow owns that ephemeral lifecycle and always removes the stack; the Gradle and Playwright test tasks still never manage a runtime. Pull-request CI does not provision k3d.
 
-The faster `Client Server / Playwright Mock Tests` job remains inside the client workflow and depends only on Client integration tests. It runs the production Client executable while Node simulates the authorization and resource servers. Changes to Auth or Resource do not make that mock job validate either real application; their real browser integration is covered by `System Tests - Docker Compose (JVM)` instead.
+The faster `Client Server Tests (No Docker) / Playwright Mock Tests (Mock Services, No Docker)` job remains inside the client workflow and depends only on Client integration tests. It runs the production Client executable while Node simulates the authorization and resource servers. Changes to Auth or Resource do not make that mock job validate either real application; their real browser integration is covered by `System Tests (Docker Compose, JVM Images)` instead.
 
 `mise run ci:all` runs the same CI phases locally, including the three system-test stages through `ci:system`. It requires a Compose stack that is already running and neither starts nor stops it.
 

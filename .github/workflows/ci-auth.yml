@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (No Docker)
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     permissions:
@@ -29,14 +29,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run Auth unit tests
+      - name: Run Auth unit tests (No Docker)
         run: ./gradlew :auth-server:test --no-daemon
 
-      - name: Publish Auth unit test results
+      - name: Publish Auth unit test results (No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Auth Unit Tests
+          name: Auth Unit Tests (No Docker)
           path: auth-server/build/test-results/test/*.xml
           reporter: java-junit
           list-suites: all
@@ -45,7 +45,7 @@ jobs:
           fail-on-empty: false
           use-actions-summary: true
 
-      - name: Upload failed Auth unit reports
+      - name: Upload failed Auth unit reports (No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:
@@ -57,7 +57,7 @@ jobs:
           retention-days: 7
 
   integration-tests:
-    name: Integration Tests
+    name: Integration Tests (In-Process Spring Boot, No Docker)
     needs: unit-tests
     timeout-minutes: 30
     runs-on: ubuntu-24.04
@@ -74,14 +74,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
 
-      - name: Run Auth integration tests
+      - name: Run Auth integration tests (In-Process Spring Boot, No Docker)
         run: ./gradlew :auth-server:integrationTest --no-daemon
 
-      - name: Publish Auth integration test results
+      - name: Publish Auth integration test results (In-Process Spring Boot, No Docker)
         uses: dorny/test-reporter@v3.0.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: Auth Integration Tests
+          name: Auth Integration Tests (In-Process Spring Boot, No Docker)
           path: auth-server/build/test-results/integrationTest/*.xml
           reporter: java-junit
           list-suites: all
@@ -90,7 +90,7 @@ jobs:
           fail-on-empty: true
           use-actions-summary: true
 
-      - name: Upload failed Auth integration reports
+      - name: Upload failed Auth integration reports (In-Process Spring Boot, No Docker)
         uses: actions/upload-artifact@v7.0.1
         if: ${{ failure() }}
         with:
