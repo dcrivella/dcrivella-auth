@@ -13,6 +13,12 @@ import {
   submitConsent,
 } from '../support/oauth-flow';
 
+/**
+ * Exercises the interactive browser E2E counterpart to the Cucumber M2M suite.
+ *
+ * This suite uses authorization code with PKCE across the browser, client, authorization server and resource server, including user login,
+ * consent, session-backed task access and logout. The M2M E2E suite instead uses client credentials without a browser or user session.
+ */
 test.describe('real OAuth browser flow', () => {
   test.describe.configure({ mode: 'serial' });
 

@@ -13,6 +13,11 @@ import org.junit.platform.suite.api.Suite;
  * Runs the complete machine-to-machine flow across the real services in an active runtime. No application component is replaced: the
  * authorization server issues the token and the resource server validates it before returning tasks.
  *
+ * <p>
+ * End-to-end describes the black-box runtime boundary, while machine-to-machine identifies the non-interactive actor and the
+ * {@code client_credentials} grant. Unlike the Playwright browser E2E suite, this test deliberately excludes browser login, user consent,
+ * the client-server session and logout.
+ *
  * @author Douglas Crivella
  * @created August 8, 2026
  */
