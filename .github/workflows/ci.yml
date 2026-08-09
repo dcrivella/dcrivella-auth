@@ -19,25 +19,21 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Dependency graph (visible job names with job IDs in parentheses):
+# Logical dependency graph (GitHub chooses the visual job positions):
 #
-# Detect Changes (changes)
-#   outputs: auth, client, resource, architecture and system_tests
-#   |
-# Repository Quality (repository-quality)
-#   +--> Cross-module Architecture Tests (Static, No Docker) (architecture)
-#   +--> Compile System Test Sources (Compile Only, No Runtime) (system-test-classes)
-#   +--> Auth Server Tests (No Docker) (auth)
-#   |      Unit Tests (No Docker) -> Integration Tests (In-Process Spring Boot, No Docker)
-#   +--> Client Server Tests (No Docker) (client)
-#   |      Unit Tests (No Docker) -> Integration Tests (Spring + JDK HTTP Stub, No Docker)
-#   |        -> Playwright Mock Tests (Mock Services, No Docker)
-#   +--> Resource Server Tests (No Docker) (resource)
-#   |      Unit and Architecture Tests (No Docker) -> Integration Tests (Spring + Mock OAuth, No Docker)
+# Detect Changes -> Repository Quality -> five path-filtered branches
 #
-# The five parallel branches converge on System Tests (Docker Compose, JVM Images)
-# (compose-system-tests-jvm). CI Success (ci-success) aggregates Detect Changes,
-# Repository Quality, every branch and the Docker Compose job.
+#   Architecture -------------------------------------------------------\
+#   Compile System Test Sources ----------------------------------------|
+#   Auth Unit -> Auth Integration --------------------------------------|
+#                                                                       |--> [System Tests] --> [CI Success]
+#   Client Unit -> Client Integration -> Playwright Mock ---------------|
+#   Resource Unit + Architecture -> Resource Integration ---------------/
+#
+# Job IDs: changes -> repository-quality -> {architecture, system-test-classes,
+# auth, client, resource} -> compose-system-tests-jvm -> ci-success.
+# CI Success also aggregates Detect Changes, Repository Quality and every branch,
+# so it can validate skipped path-filtered jobs when System Tests do not run.
 # Detect Changes is the only job that exports values. Every other job communicates
 # success or failure through needs.<job>.result and publishes reports when applicable.
 jobs:
