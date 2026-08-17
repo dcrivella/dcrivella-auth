@@ -1,7 +1,7 @@
 [versions]
 archunit = "1.5.0"
 cucumber = "7.34.6"
-graalvm-buildtools-native = "1.1.8"
+graalvm-buildtools-native = "1.1.9"
 jacoco = "0.8.15"
 mock-oauth2-server = "6.0.0"
 pitest-core = "1.25.9"
