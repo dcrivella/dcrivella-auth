@@ -1,15 +1,15 @@
 [versions]
 archunit = "1.5.0"
-cucumber = "7.34.6"
-graalvm-buildtools-native = "1.1.8"
+cucumber = "7.34.7"
+graalvm-buildtools-native = "1.1.10"
 jacoco = "0.8.15"
-mock-oauth2-server = "6.0.0"
+mock-oauth2-server = "6.0.2"
 pitest-core = "1.25.9"
 pitest-gradle = "1.19.0"
 pitest-junit5 = "1.2.3"
-spring-boot = "4.1.0"
+spring-boot = "4.1.1"
 spring-dependency-management = "1.1.7"
-spotless = "8.9.0"
+spotless = "8.10.0"
 
 [plugins]
 graalvm-buildtools = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-buildtools-native" }
