@@ -27,7 +27,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Resource unit and architecture tests (No Docker)
         run: ./gradlew :resource-server:test --no-daemon
@@ -87,7 +87,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Resource integration tests (Spring + Mock OAuth, No Docker)
         run: ./gradlew :resource-server:integrationTest --no-daemon

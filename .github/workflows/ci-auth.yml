@@ -27,7 +27,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Auth unit tests (No Docker)
         run: ./gradlew :auth-server:test --no-daemon
@@ -72,7 +72,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Auth integration tests (In-Process Spring Boot, No Docker)
         run: ./gradlew :auth-server:integrationTest --no-daemon

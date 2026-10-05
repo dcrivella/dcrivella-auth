@@ -31,7 +31,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Client unit tests (No Docker)
         run: ./gradlew :client-server:test --no-daemon
@@ -76,7 +76,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Client integration tests (Spring + JDK HTTP Stub, No Docker)
         run: ./gradlew :client-server:integrationTest --no-daemon
@@ -127,7 +127,7 @@ jobs:
           cache: npm
           cache-dependency-path: playwright/package-lock.json
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Install Playwright dependencies (Mock Services, No Docker)
         run: npm --prefix playwright ci
