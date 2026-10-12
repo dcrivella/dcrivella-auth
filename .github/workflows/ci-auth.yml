@@ -27,13 +27,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Auth unit tests (No Docker)
         run: ./gradlew :auth-server:test --no-daemon
 
       - name: Publish Auth unit test results (No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Auth Unit Tests (No Docker)
@@ -46,7 +46,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Auth unit reports (No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: auth-unit-test-reports
@@ -72,13 +72,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Auth integration tests (In-Process Spring Boot, No Docker)
         run: ./gradlew :auth-server:integrationTest --no-daemon
 
       - name: Publish Auth integration test results (In-Process Spring Boot, No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Auth Integration Tests (In-Process Spring Boot, No Docker)
@@ -91,7 +91,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Auth integration reports (In-Process Spring Boot, No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: auth-integration-test-reports

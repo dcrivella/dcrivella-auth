@@ -31,13 +31,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Client unit tests (No Docker)
         run: ./gradlew :client-server:test --no-daemon
 
       - name: Publish Client unit test results (No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Client Unit Tests (No Docker)
@@ -50,7 +50,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Client unit reports (No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: client-unit-test-reports
@@ -76,13 +76,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Client integration tests (Spring + JDK HTTP Stub, No Docker)
         run: ./gradlew :client-server:integrationTest --no-daemon
 
       - name: Publish Client integration test results (Spring + JDK HTTP Stub, No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Client Integration Tests (Spring + JDK HTTP Stub, No Docker)
@@ -95,7 +95,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Client integration reports (Spring + JDK HTTP Stub, No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: client-integration-test-reports
@@ -121,13 +121,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
           cache-dependency-path: playwright/package-lock.json
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Install Playwright dependencies (Mock Services, No Docker)
         run: npm --prefix playwright ci
@@ -142,7 +142,7 @@ jobs:
         run: CI=true env -u NO_COLOR npm --prefix playwright run test:mock
 
       - name: Publish Client Playwright mock test results (Mock Services, No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Client Playwright Mock Tests (Mock Services, No Docker)
@@ -155,7 +155,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Client Playwright reports (Mock Services, No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: client-playwright-test-reports

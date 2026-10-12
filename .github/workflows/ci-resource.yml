@@ -27,13 +27,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Resource unit and architecture tests (No Docker)
         run: ./gradlew :resource-server:test --no-daemon
 
       - name: Publish Resource unit test results (No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Resource Unit Tests (No Docker)
@@ -46,7 +46,7 @@ jobs:
           use-actions-summary: true
 
       - name: Publish Resource architecture test results (No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Resource Architecture Tests (No Docker)
@@ -59,7 +59,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Resource unit and architecture reports (No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: resource-unit-architecture-test-reports
@@ -87,13 +87,13 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run Resource integration tests (Spring + Mock OAuth, No Docker)
         run: ./gradlew :resource-server:integrationTest --no-daemon
 
       - name: Publish Resource integration test results (Spring + Mock OAuth, No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Resource Integration Tests (Spring + Mock OAuth, No Docker)
@@ -106,7 +106,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Resource integration reports (Spring + Mock OAuth, No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: resource-integration-test-reports

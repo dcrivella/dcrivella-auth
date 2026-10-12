@@ -176,14 +176,14 @@ jobs:
       - uses: actions/checkout@v7.0.1
 
       - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v6.3.0
+        uses: gradle/actions/wrapper-validation@v6.4.0
 
       - uses: actions/setup-java@v5.7.0
         with:
           distribution: temurin
           java-version: '25.0.4'
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - uses: jdx/mise-action@v4.2.4
         with:
@@ -216,13 +216,13 @@ jobs:
           distribution: temurin
           java-version: '25.0.4'
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run cross-module architecture tests (Static, No Docker)
         run: ./gradlew :architecture-tests:test --no-daemon
 
       - name: Publish cross-module architecture test results (Static, No Docker)
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Cross-module Architecture Tests (Static, No Docker)
@@ -235,7 +235,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed cross-module architecture reports (Static, No Docker)
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: cross-module-architecture-test-reports
@@ -264,7 +264,7 @@ jobs:
           distribution: temurin
           java-version: '25.0.4'
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Compile system test sources (Compile Only, No Runtime)
         run: ./gradlew :system-tests:systemTestClasses --no-daemon
@@ -300,13 +300,13 @@ jobs:
           distribution: temurin
           java-version: '25.0.4'
 
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24.19.0'
           cache: npm
           cache-dependency-path: playwright/package-lock.json
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - uses: jdx/mise-action@v4.2.4
         with:
@@ -372,7 +372,7 @@ jobs:
         run: CI=true mise run compose:playwright
 
       - name: Publish Docker Compose system test results
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && steps.system_test_preflight.outcome != 'skipped' && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Docker Compose System Tests
@@ -385,7 +385,7 @@ jobs:
           use-actions-summary: true
 
       - name: Publish Docker Compose Playwright test results
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && steps.compose_playwright.outcome != 'skipped' && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
           name: Docker Compose Playwright End-to-End Tests
@@ -398,7 +398,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed Docker Compose system test reports
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: docker-compose-system-test-reports

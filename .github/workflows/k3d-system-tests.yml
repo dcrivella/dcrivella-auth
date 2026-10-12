@@ -30,13 +30,13 @@ jobs:
           distribution: temurin
           java-version: '25.0.4'
 
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24.19.0'
           cache: npm
           cache-dependency-path: playwright/package-lock.json
 
-      - uses: gradle/actions/setup-gradle@v6.3.0
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - uses: jdx/mise-action@v4.2.4
         with:
@@ -80,7 +80,7 @@ jobs:
         run: CI=true mise run k3d:playwright
 
       - name: Publish k3d system test results
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && steps.system_test_preflight.outcome != 'skipped' }}
         with:
           name: k3d System Tests
@@ -93,7 +93,7 @@ jobs:
           use-actions-summary: true
 
       - name: Publish k3d Playwright test results
-        uses: dorny/test-reporter@v3.0.0
+        uses: dorny/test-reporter@v3.2.0
         if: ${{ !cancelled() && steps.k3d_playwright.outcome != 'skipped' }}
         with:
           name: k3d Playwright End-to-End Tests
@@ -106,7 +106,7 @@ jobs:
           use-actions-summary: true
 
       - name: Upload failed k3d system test reports
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ failure() }}
         with:
           name: k3d-system-test-reports
